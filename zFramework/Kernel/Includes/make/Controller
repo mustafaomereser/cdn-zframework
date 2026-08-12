@@ -1,0 +1,18 @@
+<?php
+namespace {namespace};
+
+use zFramework\Core\Abstracts\Controller;
+
+#[\AllowDynamicProperties]
+class {name} extends Controller 
+{
+    public function __construct()
+    {
+
+    }
+
+    public function index() 
+    {
+        
+    }
+}

@@ -1,0 +1,36 @@
+<?php
+
+namespace {namespace};
+
+#[\AllowDynamicProperties]
+class {name}
+{
+    public function __construct()
+    {
+        // Init models here like this:
+        // $this->user = new User;
+    }
+
+    public function seed()
+    {
+        // Use models here like this:
+        // $this->user->insert([
+        //     'username'   => 'admin',
+        //     'password'   => Crypter::encode('admin'),
+        //     'email'      => 'admin@localhost.com',
+        //     'api_token'  => Str::rand(60)
+        // ]); 
+    }
+
+    /**
+    * Destroy must be return $this.
+    * @return $this;
+    */
+    public function destroy() : self
+    {
+
+        // $this->user->prepare('TRUNCATE users');
+
+        return $this;
+    }
+}

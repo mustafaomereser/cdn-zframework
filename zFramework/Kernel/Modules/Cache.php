@@ -1,0 +1,36 @@
+<?php
+
+namespace zFramework\Kernel\Modules;
+
+use zFramework\Kernel\Terminal;
+
+class Cache
+{
+    public static function begin($methods)
+    {
+        if (!in_array(@Terminal::$commands[1], $methods)) return Terminal::text('[color=red]You must select in method list: ' . implode(', ', $methods) . '[/color]');
+        self::{Terminal::$commands[1]}();
+    }
+
+    /**
+     * Description: Cache Clear
+     * Usage: php kernel cache clear {views|sessions}
+     * @param {views|sessions} (second argument)
+     */
+    public static function clear()
+    {
+        global $storage_path;
+
+        $option = @Terminal::$commands[2];
+
+        $list = scan_dir($storage_path);
+        if (!in_array($option, $list)) return Terminal::text("[color=red]Wrong Option!\nOptions: " . implode(', ', $list) . ".[/color]");
+
+        Terminal::text("[color=yellow]Processing...[/color]");
+
+        $count = rrmdir($storage_path . "/$option");
+
+        Terminal::clear();
+        Terminal::text("[color=green]$option ($count qty) caches cleared![/color]");
+    }
+}

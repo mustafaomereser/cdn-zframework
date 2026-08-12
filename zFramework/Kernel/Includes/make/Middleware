@@ -1,0 +1,18 @@
+<?php
+
+namespace {namespace};
+
+#[\AllowDynamicProperties]
+class {name}
+{
+    public function attempt()
+    {
+        // middleware code
+    }
+
+    // (optional) if you don't need that, you can remove. !!! BUT if you use that middleware in Routes you need this.
+    public function error()
+    {
+        abort();
+    }
+}

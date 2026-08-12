@@ -1,0 +1,25 @@
+push.bat
+composer.lock
+error_logs
+Releases
+db-debug
+db-analyzes
+database/backups
+public_html/uploads
+zFramework/storage
+zFramework/vendor
+
+# CDN object store, derivative cache and partial uploads. Content addressed and
+# regenerable in the second case, irreplaceable in the first - back it up, do
+# not commit it.
+storage/cdn
+config/crypt.php
+.DS_Store
+analysis
+CLAUDE.md
+
+# RoadRunner binary - fetched per machine with `./vendor/bin/rr get-binary`,
+# ~64MB and platform specific.
+rr
+rr.exe
+.rr.pid

@@ -1,0 +1,23 @@
+<?php
+namespace {namespace};
+
+use zFramework\Core\Abstracts\Request;
+
+#[\AllowDynamicProperties]
+class {name} extends Request 
+{
+
+    public function __construct()
+    {
+        $this->authorize      = false;
+        $this->htmlencode     = false;
+        $this->attributeNames = [];
+    }
+
+    public function columns(): array
+    {
+        return [
+
+        ];
+    }
+}
