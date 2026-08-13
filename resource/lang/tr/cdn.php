@@ -57,6 +57,18 @@ return [
         'advanced'   => 'Gelişmiş',
     ],
 
+    'language' => [
+        'title'      => '{language} hazırlanıyor',
+        'lede'       => 'Siteyi bu dilde okuyan ilk kişisiniz, o yüzden çeviri şimdi yapılıyor. Bir kereliğine, yaklaşık bir dakika sürüyor — sonrasında herkes için hazır bir dosya oluyor.',
+        'working'    => 'Çevriliyor…',
+        'ready'      => 'Hazır. Geri dönülüyor…',
+        'retry'      => 'Çeviri servisi meşgul. Bekleniyor…',
+        'failed'     => 'Bu istek geçmedi. Birazdan yeniden denenecek — ya da sonra gelin, kaldığı yerden devam eder.',
+        'note'       => 'Bu bir ilk taslak. Kötü duran bir satır olursa dil dosyasında düzeltilebilir ve düzeltilmiş kalır.',
+        'cancel'     => 'Şimdi değil',
+        'build'      => 'henüz çevrilmedi',
+    ],
+
     'visibility' => [
         'public'  => 'herkese açık',
         'signed'  => 'imzalı',

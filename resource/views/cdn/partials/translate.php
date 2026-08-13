@@ -1,38 +1,57 @@
 <?php
 
 /**
- * The language switcher, and Google's translate widget behind it.
+ * The language switcher.
  *
- * Two different things, deliberately kept apart:
+ * Every configured language is in it, translated or not. The ones with a file
+ * under resource/lang/<code>/cdn.php are a plain page reload rendered by the
+ * server - no third-party script, no round trip per visit, no flip from English
+ * to the target while the visitor watches. The ones without are built when
+ * somebody picks them: a page with a bar on it for about a minute, and then
+ * they are a file too, for everybody who comes after.
  *
- *   - English and Turkish are translated by hand, live in resource/lang, and
- *     are switched by reloading the page. Nothing is guessed and nothing moves.
- *   - Everything else is the widget, which rewrites the page in the browser.
+ * So the list does not shrink to what has been generated. A language the
+ * visitor reads is either there or one click from being there, and nobody has
+ * to know which until they look at the bar.
  *
- * The widget cannot tell a sentence from a shell command, so before it loads,
- * every element that must survive intact is marked `translate="no"`: code
- * blocks, urls, monospaced values, and anything holding a bucket name, a path
- * or an api key. A translated curl command is a command that does not run, and
- * a translated bucket name is a 404.
- *
- * Machine translation always starts from English. Turkish is a hand-written
- * translation of the English, so translating Turkish into German is a copy of
- * a copy - and every engine has far more English to work from than Turkish.
- * Picking a machine language therefore switches the page to English first and
- * translates that.
+ * The old in-browser widget is still here, off unless i18n.translate-widget
+ * turns it on. It is now only for a language on-demand cannot build, and it
+ * comes with the caveat it always had: it cannot tell a sentence from a shell
+ * command, so anything that must survive intact is marked translate="no"
+ * before it loads.
  *
  * @var string $area 'public' or 'panel'
  */
 
+use App\Cdn\Locale;
 use zFramework\Core\Facades\Lang;
 
 $area    ??= 'public';
 $current  = Lang::currentLocale();
 $widget   = (bool) (config('cdn.i18n.translate-widget')[$area] ?? false);
-$extra    = $widget ? (array) config('cdn.i18n.widget-languages') : [];
 
-# The hand-translated ones, from the directories that actually exist.
-$native = array_values(array_intersect(Lang::list(), ['en', 'tr']));
+$hand    = Locale::native();
+$build   = Locale::buildable();
+
+$native = $machine = $missing = $fallback = [];
+
+foreach (Locale::names() as $code => $name) {
+    if (Locale::ready($code)) {
+        if (in_array($code, $hand, true)) $native[$code] = $name;
+        else                              $machine[$code] = $name;
+
+        continue;
+    }
+
+    # No file. Offered anyway when it can be built - and when it cannot, only
+    # if the widget is there to render it in the browser instead.
+    if ($build && !in_array($code, $hand, true)) $missing[$code] = $name;
+    elseif ($widget)                             $fallback[$code] = $name;
+}
+
+# Where to come back to once it is built. The switcher is on every page, so
+# this is whichever one they were reading.
+$here = (string) ($_SERVER['REQUEST_URI'] ?? '/');
 ?>
 
 <div class="lang-menu dropdown">
@@ -42,23 +61,57 @@ $native = array_values(array_intersect(Lang::list(), ['en', 'tr']));
     </button>
 
     <div class="dropdown-menu dropdown-menu-end lang-list">
-        <?php foreach ($native as $code) : ?>
-            <?php # The href still works with javascript off; with it on, the
-                  # handler clears the machine translation first and navigates
-                  # itself, so the two cannot race. ?>
+        <?php # The href works with javascript off; with it on, the handler
+              # clears any leftover widget cookie first and navigates itself,
+              # so a reload cannot arrive before the cookie is gone. ?>
+        <?php foreach ($native as $code => $name) : ?>
             <a class="dropdown-item <?= $code === $current ? 'active' : '' ?>" data-lang="<?= $code ?>"
                href="<?= route('language', ['lang' => $code]) ?>"
                onclick="return cdnNative(this.href)">
-                <span class="notranslate" translate="no"><?= $code === 'tr' ? 'Türkçe' : 'English' ?></span>
+                <span class="notranslate" translate="no"><?= $name ?></span>
                 <i class="bi bi-check2 ms-auto lang-tick <?= $code === $current ? '' : 'd-none' ?>"></i>
             </a>
         <?php endforeach ?>
 
-        <?php if (count($extra)) : ?>
+        <?php if (count($machine)) : ?>
             <div class="dropdown-divider"></div>
             <div class="lang-note"><?= _l('cdn.common.translated') ?></div>
 
-            <?php foreach ($extra as $code => [$name, $flag]) : ?>
+            <?php # Also a plain reload. These are files like the ones above -
+                  # the only difference is who wrote the first draft. ?>
+            <?php foreach ($machine as $code => $name) : ?>
+                <a class="dropdown-item <?= $code === $current ? 'active' : '' ?>" data-lang="<?= $code ?>"
+                   href="<?= route('language', ['lang' => $code]) ?>"
+                   onclick="return cdnNative(this.href)">
+                    <span class="notranslate" translate="no"><?= $name ?></span>
+                    <i class="bi bi-check2 ms-auto lang-tick <?= $code === $current ? '' : 'd-none' ?>"></i>
+                </a>
+            <?php endforeach ?>
+        <?php endif ?>
+
+        <?php if (count($missing)) : ?>
+            <div class="dropdown-divider"></div>
+            <div class="lang-note"><?= _l('cdn.language.build') ?></div>
+
+            <?php # Not translated yet. Picking one starts it - which is a page
+                  # with a bar on it for a minute, and then this language moves
+                  # up into the group above and stays there. ?>
+            <?php foreach ($missing as $code => $name) : ?>
+                <a class="dropdown-item lang-build" data-lang="<?= $code ?>"
+                   href="<?= route('language.prepare', ['lang' => $code]) ?>?next=<?= urlencode($here) ?>">
+                    <span class="notranslate" translate="no"><?= $name ?></span>
+                    <i class="bi bi-download ms-auto"></i>
+                </a>
+            <?php endforeach ?>
+        <?php endif ?>
+
+        <?php if (count($fallback)) : ?>
+            <div class="dropdown-divider"></div>
+
+            <?php # Translated in the browser, on every page, every visit. The
+                  # cure is `php cdn translate lang=<code>`, after which the
+                  # language moves up into the list above. ?>
+            <?php foreach ($fallback as $code => $name) : ?>
                 <a class="dropdown-item notranslate" translate="no" data-lang="<?= $code ?>"
                    href="javascript:void(0)" onclick="cdnTranslate('<?= $code ?>')">
                     <?= $name ?>

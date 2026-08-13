@@ -891,6 +891,28 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 .lang-list .dropdown-divider { margin: 5px 0; border-color: var(--line); }
 .lang-list .lang-note { font-size: .6875rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); padding: 4px 10px 6px; }
 
+/* Not translated yet. Dimmer than the rest, with the arrow that says picking it
+   is going to fetch something rather than just switch. */
+.lang-list .lang-build { color: var(--ink-3); }
+.lang-list .lang-build:hover { color: var(--ink); }
+.lang-list .lang-build i { font-size: .78rem; opacity: .55; }
+
+/* The page that builds one. */
+.build-mark {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+    font-size: 1.25rem;
+}
+
+.build-bar { height: 7px; background: var(--surface-3); border-radius: 99px; }
+.build-bar .progress-bar { background: var(--accent); transition: width .35s ease; }
+
 .lang-switch { display: inline-flex; background: var(--surface-3); border-radius: var(--radius-sm); padding: 2px; }
 
 .lang-switch a {

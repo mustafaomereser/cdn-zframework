@@ -26,7 +26,7 @@ and run it for other people.
 7. [Signed URLs](#7-signed-urls)
 8. [The panel, page by page](#8-the-panel-page-by-page)
 9. [Accounts, quotas and access](#9-accounts-quotas-and-access)
-10. [Command line](#10-command-line)
+10. [Command line](#10-command-line) · [Languages](#101-languages)
 11. [Cron](#11-cron)
 12. [Configuration](#12-configuration)
 13. [Going to production](#13-going-to-production)
@@ -534,6 +534,7 @@ php cdn rollup [date=YYYY-MM-DD]            # a day of logs into the charts
 php cdn prune [days=30]                     # trim the request log
 php cdn verify [--fix]                      # records vs disk, recompute counters
 php cdn stats [days=7]
+php cdn translate lang=de|all [--force]      # machine-translate the interface
 ```
 
 `php cdn` is separate from `php terminal` on purpose: the framework only
@@ -544,6 +545,41 @@ copying a new release over the top — anything added in there is lost.
 migration. Counters are maintained incrementally on the hot path, which is the
 right trade there and means they can drift; `--fix` recounts them and
 quarantines records whose bytes are gone.
+
+---
+
+## 10.1 Languages
+
+English and Turkish are written by hand in `resource/lang/<code>/cdn.php`.
+Everything else is generated from the English one:
+
+```bash
+php cdn translate lang=de      # one language
+php cdn translate lang=all     # every language in config/cdn.php → i18n.languages
+```
+
+What comes out is a normal locale file: the server renders it, it caches like
+any other page, and there is no third-party script rewriting the page in the
+visitor's browser.
+
+**You do not have to run it first.** Every language in `i18n.languages` is in
+the switcher whether or not it has a file. Picking one that does not shows a
+progress bar for about a minute while it is built — twenty-five strings per
+request, so nothing times out and closing the tab loses only the chunk in
+flight — and then the visitor carries on where they were, in their language.
+From then on it is a file like any other, for everybody. `i18n.on-demand.enabled`
+turns that off if you would rather the switcher only offered what you generated.
+
+It is a **first draft**. Correct a line and it stays — running the command again
+only fills in values that are empty, unless you pass `--force`. `{placeholders}`
+and markup are masked out before the call and put back after, and the words in
+`i18n.keep-words` (bucket, ETag, webp, CORS…) are left in English, because they
+are what the URL and the API call things.
+
+With no `i18n.translator.key` the command uses the same keyless endpoint the
+translate widget uses: no setup, no quota to configure, and no promises — fine
+for something run once on a terminal. Set a Google Cloud Translation key there
+for the supported, billed API.
 
 ---
 

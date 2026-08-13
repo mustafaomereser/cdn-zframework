@@ -85,7 +85,7 @@
 </section>
 @endif
 
-<section class="container pb-5">
+<section class="container pb-5 mt-3">
     <h2 class="section-title">{{ _l('cdn.home.features-title') }}</h2>
     <p class="hint mb-4">{{ _l('cdn.home.features-lede') }}</p>
 

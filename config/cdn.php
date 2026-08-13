@@ -356,38 +356,84 @@ return [
     /**
      * Languages.
      *
-     * The interface is translated properly into the languages under
-     * resource/lang - English and Turkish - and those are what the switcher
-     * offers.
+     * Every language listed below is in the switcher. The ones with a file
+     * under resource/lang/<code>/cdn.php are served like any other page; the
+     * ones without are built when somebody picks them - a progress bar for a
+     * minute, and from then on they are a file too, for everybody.
      *
-     * translate-widget adds Google's translate widget on top, for the long tail
-     * nobody has translated by hand. It rewrites the page in the browser and
-     * cannot tell prose from a curl command, so everything that must survive
-     * intact - code blocks, urls, bucket names, api keys - is marked
-     * `translate="no"` and left alone.
-     *
-     * It is off in the panel by default. A working tool is used in a language
-     * its operator reads, and a third-party script rewriting a page that has an
-     * API key on it is a poor trade for a language nobody asked for.
+     * Which is the whole point of doing it this way rather than with a widget
+     * that rewrites the page in the visitor's browser: the work happens once,
+     * the result is reviewable, and a human who knows the language better than
+     * the engine did can correct a line of it.
      */
     'i18n' => [
-        'translate-widget' => [
-            'public' => true,
-            'panel'  => false,
+        # What the switcher offers, in this order. A language does not need a
+        # file to be listed - see on-demand below.
+        'languages' => [
+            'en' => 'English',      'tr' => 'Türkçe',       'de' => 'Deutsch',
+            'fr' => 'Français',     'es' => 'Español',      'it' => 'Italiano',
+            'pt' => 'Português',    'nl' => 'Nederlands',   'pl' => 'Polski',
+            'ru' => 'Русский',      'uk' => 'Українська',   'el' => 'Ελληνικά',
+            'ar' => 'العربية',      'fa' => 'فارسی',        'az' => 'Azərbaycan',
+            'kk' => 'Қазақша',      'uz' => 'Oʻzbekcha',    'hi' => 'हिन्दी',
+            'zh-CN' => '简体中文',   'ja' => '日本語',        'ko' => '한국어',
         ],
 
-        # Offered by the widget, on top of the two real translations.
-        'widget-languages' => [
-            'de' => ['Deutsch', 'de'],   'fr' => ['Français', 'fr'],
-            'es' => ['Español', 'es'],   'it' => ['Italiano', 'it'],
-            'pt' => ['Português', 'pt'], 'nl' => ['Nederlands', 'nl'],
-            'pl' => ['Polski', 'pl'],    'ru' => ['Русский', 'ru'],
-            'uk' => ['Українська', 'ua'], 'el' => ['Ελληνικά', 'gr'],
-            'ar' => ['العربية', 'sa'],   'fa' => ['فارسی', 'ir'],
-            'az' => ['Azərbaycan', 'az'], 'kk' => ['Қазақша', 'kz'],
-            'uz' => ['Oʻzbekcha', 'uz'], 'hi' => ['हिन्दी', 'in'],
-            'zh-CN' => ['简体中文', 'cn'], 'ja' => ['日本語', 'jp'],
-            'ko' => ['한국어', 'kr'],
+        # The file everything is translated from. English rather than Turkish
+        # because every engine has far more of it to work from, and because a
+        # translation of a translation is a copy of a copy.
+        'source' => 'en',
+
+        # Which languages are hand-written, and so never overwritten by the
+        # machine and never labelled as machine translated.
+        'native' => ['en', 'tr'],
+
+        # Words the machine must leave alone. They are what the URL, the API and
+        # the documentation call things - a translated `bucket` sends somebody
+        # looking for a word that appears nowhere in the product. Matched whole
+        # and case-insensitively, longest first.
+        'keep-words' => [
+            'CDN', 'API', 'URL', 'URLs', 'ETag', 'ETags', 'HTTP', 'CORS', 'gzip',
+            'bucket', 'buckets', 'webp', 'avif', 'jpg', 'png', 'gif', 'svg',
+            'cron', 'origin', 'hotlink', 'curl', 'HEAD', 'imagick', 'gd',
+            'redis', 'apcu', 'finfo', 'sha256', 'immutable',
+        ],
+
+        'translator' => [
+            # With a key, the official API: supported and billed. Without one,
+            # the undocumented endpoint the translate widget itself uses - no
+            # setup, no promises, rate limited by address. Acceptable because
+            # this runs once on a terminal, not on a visitor's request.
+            'key'      => null,
+            'endpoint' => 'https://translate.googleapis.com/translate_a/single',
+            'timeout'  => 15,
+
+            # Pause between calls, in milliseconds. The keyless endpoint starts
+            # refusing when a few hundred arrive at once.
+            'delay'    => 120,
+        ],
+
+        # Building a missing language from the browser.
+        #
+        # chunk is how many strings one request translates. Small enough that a
+        # request finishes well inside any timeout, large enough that the bar
+        # moves: 25 at the default delay is about four seconds of work.
+        #
+        # Turn enabled off on a host that would rather not make calls to a
+        # translation service because a visitor opened a menu. The switcher then
+        # offers only what exists, and `php cdn translate` is the way to add one.
+        'on-demand' => [
+            'enabled' => true,
+            'chunk'   => 25,
+        ],
+
+        # The old client-side widget, off by default now that a missing language
+        # builds itself into a real file instead. Turning it on adds nothing to
+        # the switcher unless a language is configured that on-demand cannot
+        # build - it is kept as the escape hatch, not as the mechanism.
+        'translate-widget' => [
+            'public' => false,
+            'panel'  => false,
         ],
     ],
 

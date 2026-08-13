@@ -149,7 +149,7 @@
     <div class="card-body">
         <h6>{{ _l('cdn.keys.code') }}</h6>
         <p class="hint">
-            {!! _l('cdn.keys.code-lede') !!}
+            <?= _l('cdn.keys.code-lede') ?>
         </p>
 
         <label class="form-label small mb-1">{{ _l('cdn.keys.api-address') }}</label>
@@ -183,7 +183,7 @@
         </div>
 
         <p class="hint mt-3 mb-0">
-            {!! _l('cdn.keys.code-more', ['docs' => '<a href="' . route('docs') . '" target="_blank">' . _l('cdn.keys.docs') . '</a>']) !!}
+            <?= _l('cdn.keys.code-more', ['docs' => '<a href="' . route('docs') . '" target="_blank">' . _l('cdn.keys.docs') . '</a>']) ?>
         </p>
     </div>
 </div>

@@ -57,6 +57,18 @@ return [
         'advanced'   => 'Advanced',
     ],
 
+    'language' => [
+        'title'      => 'Preparing {language}',
+        'lede'       => 'Nobody has read the site in this language yet, so it is being translated now. It takes about a minute, once - after that it is a file, for everybody.',
+        'working'    => 'Translating…',
+        'ready'      => 'Ready. Taking you back…',
+        'retry'      => 'The translation service is busy. Waiting…',
+        'failed'     => 'That did not go through. It will try again in a moment - or come back later and carry on from here.',
+        'note'       => 'It is a first draft. If a line reads badly, it can be corrected in the language file and it stays corrected.',
+        'cancel'     => 'Not now',
+        'build'      => 'not translated yet',
+    ],
+
     'visibility' => [
         'public'  => 'public',
         'signed'  => 'signed',

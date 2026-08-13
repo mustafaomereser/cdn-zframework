@@ -112,6 +112,7 @@ class Console
             'verify' => 'Check every row against the disk.        [--fix]',
             'stats'  => 'Storage, traffic and cache numbers.      [days=7]',
             'serve'  => 'Development server, with the router.     [host=] [port=8080]',
+            'translate' => 'Machine-translate the interface.      lang=de|all [--force]',
         ];
 
         foreach ($available as $name) Terminal::text('  [color=green]' . str_pad($name, 8) . '[/color] ' . ($help[$name] ?? ''));
@@ -522,6 +523,92 @@ class Console
         Terminal::text('[color=dark-gray]Panel:   [/color] ' . (config('cdn.admin.route') ?: '/cdn-admin') . "\n");
 
         passthru('php -S ' . escapeshellarg("$host:$port") . ' -t ' . escapeshellarg($public) . ' ' . escapeshellarg($router));
+    }
+
+    /**
+     * Machine-translate the interface into a language file.
+     *
+     * Once, here, rather than on every page in every visitor's browser. What
+     * comes out is an ordinary locale: rendered by the server, cached like any
+     * other page, and a file somebody can correct a line of.
+     *
+     * @return void
+     */
+    public static function translate(): void
+    {
+        $source = (string) (config('cdn.i18n.source') ?: 'en');
+        $native = (array) config('cdn.i18n.native');
+        $names  = (array) config('cdn.i18n.languages');
+        $force  = in_array('--force', self::$parameters, true);
+
+        $file = base_path("resource/lang/$source/cdn.php");
+
+        if (!is_file($file)) {
+            Terminal::text("[color=red]The source language file is missing: {$file}[/color]");
+            return;
+        }
+
+        $strings = (array) include($file);
+        $wanted  = self::$parameters['lang'] ?? null;
+
+        if (!$wanted) {
+            Terminal::text('[color=yellow]Usage:[/color] php cdn translate lang=de [--force]');
+            Terminal::text('[color=yellow]      [/color] php cdn translate lang=all');
+            Terminal::text('');
+            Terminal::text('[color=dark-gray]' . Translator::count($strings) . " strings in resource/lang/$source/cdn.php[/color]");
+            Terminal::text('[color=dark-gray]Available: [/color]' . implode(', ', array_keys($names)));
+            return;
+        }
+
+        $targets = $wanted === 'all'
+            ? array_values(array_diff(array_keys($names), $native))
+            : [$wanted];
+
+        foreach ($targets as $language) {
+            if (in_array($language, $native, true)) {
+                Terminal::text("[color=yellow]$language is hand-written - skipped. Edit the file directly.[/color]");
+                continue;
+            }
+
+            if (!isset($names[$language])) {
+                Terminal::text("[color=red]`$language` is not in i18n.languages - add it there first.[/color]");
+                continue;
+            }
+
+            $target   = base_path("resource/lang/$language/cdn.php");
+            $existing = is_file($target) ? (array) include($target) : [];
+
+            $done  = 0;
+            $delay = max(0, (int) config('cdn.i18n.translator.delay')) * 1000;
+
+            Terminal::text("[color=cyan]{$language}[/color] [color=dark-gray]{$names[$language]}[/color]");
+
+            $translated = Translator::walk($strings, $existing, $language, $force, function ($key, $before, $after) use (&$done, $delay) {
+                $done++;
+
+                # One line per string would scroll a terminal off its own
+                # history; the count is what somebody watching wants.
+                if ($done % 10 === 0) {
+                    echo "\r  " . $done . ' translated…';
+                    flush();
+                }
+
+                if ($delay) usleep($delay);
+            });
+
+            echo "\r";
+
+            if (!$done) {
+                Terminal::text('  [color=dark-gray]nothing to do - every string already has a value (--force to redo)[/color]');
+                continue;
+            }
+
+            Translator::write($target, $translated, $language, $names[$language]);
+
+            Terminal::text("  [color=green]$done translated[/color] [color=dark-gray]→ resource/lang/$language/cdn.php[/color]");
+        }
+
+        Terminal::text("\n[color=dark-gray]Generated files are a first draft. Correct a line and it stays: this command only fills in what is empty unless you pass --force.[/color]");
     }
 
     /**

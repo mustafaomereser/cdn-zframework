@@ -8,6 +8,11 @@ use App\Controllers\PushNotificationController;
 
 Route::get('/language/{lang}', [LanguageController::class, 'set'])->name('language');
 
+# Picking a language nobody has generated yet. `prepare` is the page with the
+# bar on it; `build` is what that page calls, once per chunk, until it is done.
+Route::get('/language/{lang}/prepare', [LanguageController::class, 'prepare'])->name('language.prepare');
+Route::post('/language/{lang}/build', [LanguageController::class, 'build'])->name('language.build');
+
 # Subscribing is a POST, so it carries a csrf token like every other one -
 # assets/js/push-notification.js reads it from the page.
 Route::pre('/push-notification')->group(function () {
