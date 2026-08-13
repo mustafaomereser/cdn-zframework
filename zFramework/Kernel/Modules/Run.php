@@ -49,13 +49,7 @@ class Run
 
         if (in_array('--opcache', Terminal::$parameters)) $opcache = '-d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.validate_timestamps=1 -d opcache.revalidate_freq=0 -d opcache.memory_consumption=128 -d opcache.max_accelerated_files=20000';
 
-        # With a router script the dev server behaves like the .htaccess rewrite:
-        # an existing file is served as a file, everything else reaches
-        # index.php. Without it any url with an extension that is not a real
-        # file - which is every CDN url - 404s before PHP is reached.
-        $router = is_file('router.php') ? ' router.php' : '';
-
-        shell_exec("php $opcache -S $server:$port$router");
+        shell_exec("php $opcache -S $server:$port");
     }
 
     /**

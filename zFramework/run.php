@@ -68,15 +68,6 @@ class Run
         \zFramework\Core\Helpers\Http::class,
         \zFramework\Core\Facades\DB\Analyzer\Analyze::class,
         \zFramework\Core\Profiler::class,
-
-        # CDN request state: the resolved API key, the bucket rows looked up for
-        # this request, and the byte counter the access log reads. Under FPM the
-        # process dies and none of it matters; in a worker, leaving them would
-        # bill one visitor's transfer to the next and answer with the previous
-        # caller's credentials.
-        \App\Cdn\Credentials::class,
-        \App\Cdn\Registry::class,
-        \App\Cdn\Delivery::class,
     ];
 
     /**

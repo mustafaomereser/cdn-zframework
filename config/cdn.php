@@ -356,7 +356,7 @@ return [
     ],
 
     /**
-     * Housekeeping, run by `php terminal cdn gc` from cron.
+     * Housekeeping, run by `php cdn gc` from cron.
      */
     'gc' => [
         'orphan-objects'   => true,   # stored bytes no row references

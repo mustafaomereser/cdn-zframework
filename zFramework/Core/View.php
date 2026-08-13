@@ -695,11 +695,6 @@ class View
             fn($expression) => '<?php if (isset(' . $expression[1] . ')): ?>',
             self::$view
         );
-
-        # Without this the if() opened above is never closed, and the compiled
-        # template is a parse error - which shows up as a blank section rather
-        # than as anything pointing back at the directive.
-        self::$view = preg_replace('/@endisset/', '<?php endif; ?>', self::$view);
     }
 
     /**

@@ -129,10 +129,10 @@
                     Run these from cron. <code>cron/cdn.php</code> ships with the schedule.
                 </p>
 
-                <pre class="small mb-0 bg-light p-3 rounded"><code>php terminal cdn gc        # orphans, expired uploads, eviction
-php terminal cdn rollup    # yesterday into cdn_stats
-php terminal cdn prune     # trim the access log
-php terminal cdn verify    # every row against the disk</code></pre>
+                <pre class="small mb-0 bg-light p-3 rounded"><code>php cdn gc        # orphans, expired uploads, eviction
+php cdn rollup    # yesterday into cdn_stats
+php cdn prune     # trim the access log
+php cdn verify    # every row against the disk</code></pre>
             </div>
         </div>
     </div>

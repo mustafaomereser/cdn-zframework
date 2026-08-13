@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * CDN command line: `php cdn <command>`.
+ *
+ * Sits beside `terminal` rather than inside it. The framework's terminal only
+ * discovers modules under zFramework/Kernel/Modules, and zFramework is its own
+ * project - an application command placed there is application code the
+ * framework then has to carry.
+ *
+ * Booted the same way `terminal` boots, so everything the application has is
+ * available: config, models, the database, the facades.
+ */
+
+define('BASE_PATH', __DIR__);
+
+include('zFramework/bootstrap.php');
+
+zFramework\Run::includer(FRAMEWORK_PATH . '/modules', false);
+zFramework\Run::includer(FRAMEWORK_PATH . '/modules/error_handlers/loader.php');
+
+App\Cdn\Console::begin($argv);

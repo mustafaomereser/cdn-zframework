@@ -75,7 +75,7 @@ $peak = max(1, max(array_map(fn($day) => (int) $day['requests'], $series ?: [['r
         @else
         <p class="text-secondary mb-0 small">
             Nothing rolled up yet. The daily rollup runs from
-            <code>php terminal cdn rollup</code> — today's traffic is in the counter above until it does.
+            <code>php cdn rollup</code> — today's traffic is in the counter above until it does.
         </p>
         @endif
     </div>

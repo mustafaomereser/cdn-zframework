@@ -44,10 +44,10 @@ transforms. `apcu` and `redis` are optional and both earn their keep.
 php terminal db migrate
 
 # 2. Create the storage directories and a first project + bucket
-php terminal cdn setup bucket=assets
+php cdn setup bucket=assets
 
 # 3. Serve
-php terminal run
+php cdn serve
 ```
 
 `cdn setup` prints what it made and, more usefully, what the machine can
@@ -57,7 +57,7 @@ PHP can write.
 Upload something and fetch it back:
 
 ```bash
-php terminal cdn import bucket=assets from=./some-images prefix=images
+php cdn import bucket=assets from=./some-images prefix=images
 ```
 
 ```
@@ -210,7 +210,7 @@ and nothing else.
 From the command line, or the API, when you do not want to ship the key:
 
 ```bash
-php terminal cdn sign bucket=assets path=images/logo.png ttl=3600
+php cdn sign bucket=assets path=images/logo.png ttl=3600
 ```
 
 ---
@@ -278,10 +278,10 @@ with it.
 ## 8. Purging
 
 ```bash
-php terminal cdn purge bucket=assets                    # whole bucket
-php terminal cdn purge bucket=assets prefix=images/     # a subtree
-php terminal cdn purge bucket=assets path=logo.png      # one file
-php terminal cdn purge bucket=assets tag=hero           # by tag
+php cdn purge bucket=assets                    # whole bucket
+php cdn purge bucket=assets prefix=images/     # a subtree
+php cdn purge bucket=assets path=logo.png      # one file
+php cdn purge bucket=assets tag=hero           # by tag
 ```
 
 A bucket purge bumps `cache_version`, which changes every derivative signature
@@ -362,18 +362,18 @@ Rate limits are per key, and every response carries `X-RateLimit-*`.
 ## 11. Terminal
 
 ```bash
-php terminal cdn setup [bucket=assets]     # directories, first project + bucket
-php terminal cdn import bucket=… from=…    # bulk import a directory
-php terminal cdn key create name=deploy scopes=read,upload
-php terminal cdn key list
-php terminal cdn key revoke access=cdn_xxx
-php terminal cdn sign bucket=… path=… [ttl=3600]
-php terminal cdn purge bucket=… [prefix=… | path=… | tag=…]
-php terminal cdn gc [grace=3600]           # orphans, expired uploads, eviction
-php terminal cdn rollup [date=YYYY-MM-DD]  # a day of logs into cdn_stats
-php terminal cdn prune [days=30]           # trim the access log
-php terminal cdn verify [--fix]            # rows vs disk, recompute counters
-php terminal cdn stats [days=7]
+php cdn setup [bucket=assets]     # directories, first project + bucket
+php cdn import bucket=… from=…    # bulk import a directory
+php cdn key create name=deploy scopes=read,upload
+php cdn key list
+php cdn key revoke access=cdn_xxx
+php cdn sign bucket=… path=… [ttl=3600]
+php cdn purge bucket=… [prefix=… | path=… | tag=…]
+php cdn gc [grace=3600]           # orphans, expired uploads, eviction
+php cdn rollup [date=YYYY-MM-DD]  # a day of logs into cdn_stats
+php cdn prune [days=30]           # trim the access log
+php cdn verify [--fix]            # rows vs disk, recompute counters
+php cdn stats [days=7]
 ```
 
 `verify` is the one to run after anything unusual — a restore, a disk that

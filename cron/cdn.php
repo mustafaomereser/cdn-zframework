@@ -13,7 +13,7 @@
  *
  *   0 * * * * php /path/to/cron/cdn.php
  *
- * `php terminal cdn gc` and friends do the same things interactively, with
+ * `php cdn gc` and friends do the same things interactively, with
  * output. This one is quiet unless something goes wrong.
  */
 
