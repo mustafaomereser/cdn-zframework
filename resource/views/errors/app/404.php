@@ -1,4 +1,10 @@
-@extends('errors.app.main')
+<?php
+
+use zFramework\Core\Facades\Auth;
+
+if (!Auth::check()) redirect();
+?>
+@extends('cdn.main')
 
 @section('body')
 <div class="text-center my-5">

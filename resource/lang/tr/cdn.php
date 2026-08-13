@@ -41,6 +41,13 @@ return [
         'delete-account'  => 'Hesabı ve dosyalarını sil',
         'custom-quota'    => 'Bu projeye özel kota',
         'custom-quota-help' => 'Kapalıyken {user} hesabını takip eder ve hesabın alanı değişince yeniden yazılır. Açıkken bu rakamlarda kalır.',
+        'is-suspended-user'    => 'Bu hesap askıya alınmış.',
+        'is-suspended-project' => 'Bu proje askıya alınmış.',
+        'restore-question-user'    => 'Giriş yapamıyor, adresleri 403 dönüyor, dosya yüklenemiyor ve silinemiyor. Dosyalarına dokunulmadı.',
+        'restore-question-project' => 'Adresleri 403 dönüyor, içine dosya yüklenemiyor ve içinden silinemiyor. Dosyalarına dokunulmadı.',
+        'restore-user'    => 'Bu hesabı geri aç',
+        'restore-project' => 'Bu projeyi geri aç',
+        'suspend-help'    => 'Sunmayı ve içine yazmayı durdurur. Hiçbir şey silinmez, sebep sahibine gösterilir.',
         'reason'          => 'Sebep',
         'reason-holder'   => 'Neden — sahibi bunu görecek',
         'reason-help'     => 'Sahibine gösterilir. Yazmazsan yalnızca çalışmadığını görür.',
@@ -540,6 +547,8 @@ return [
     ],
 
     'upload-errors' => [
+        'project-suspended' => 'Bu proje askıya alınmış - içine dosya yüklenemez ve içinden silinemez. Sebebini bu kurulumun işletmecisine sor.',
+        'bucket-inactive'   => 'Bu bucket etkin değil - içine yazılamaz.',
         'extension-blocked'      => 'Bu dosya türü yüklenemez - sunucuda çalışabilen bir tür.',
         'extension-not-allowed'  => 'Bu bucket bu dosya türünü kabul etmiyor.',
         'mime-not-allowed'       => 'Bu bucket bu içerik türünü kabul etmiyor.',

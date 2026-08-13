@@ -396,6 +396,10 @@ class ApiController
         $bucket = $this->bucketById((int) $file['bucket_id']);
         if (!$bucket) return $this->json(['ok' => false, 'error' => 'forbidden'], 403);
 
+        # A suspended project does not change. Uploads are refused inside
+        # Uploader; this is the other half.
+        if ($reason = \App\Cdn\Guard::frozen($bucket)) return $this->json(['ok' => false, 'error' => $reason], 403);
+
         Uploader::delete($file);
         Registry::forgetBucket($bucket);
 

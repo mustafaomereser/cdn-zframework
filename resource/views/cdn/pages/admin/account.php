@@ -173,11 +173,24 @@ $share = $user['quota'] > 0 ? min(100, round($user['storage'] / $user['quota'] *
                     <h6>{{ _l('cdn.operator.account-actions') }}</h6>
 
                     <?php if ($suspended) : ?>
-                        <form method="POST" action="{{ route('cdn-admin.operator.users.status', ['id' => $user['id']]) }}" class="mb-3">
-                            <?= csrf() ?>
-                            <input type="hidden" name="status" value="active">
-                            <button class="btn btn-sm btn-outline-success">{{ _l('cdn.operator.restore') }}</button>
-                        </form>
+                        <?php # What is true now, then what can be done about it.
+                              # A lone "Restore" button says nothing about the
+                              # state it would be leaving. ?>
+                        <div class="state-box mb-3">
+                            <div class="mb-1"><b><?= _l('cdn.operator.is-suspended-user') ?></b></div>
+
+                            <?php if ($user['suspend_reason'] ?? '') : ?>
+                                <div class="small mb-2"><?= _l('cdn.operator.reason') ?>: <?= e((string) $user['suspend_reason'], false) ?></div>
+                            <?php endif ?>
+
+                            <div class="hint small mb-2"><?= _l('cdn.operator.restore-question-user') ?></div>
+
+                            <form method="POST" action="{{ route('cdn-admin.operator.users.status', ['id' => $user['id']]) }}">
+                                <?= csrf() ?>
+                                <input type="hidden" name="status" value="active">
+                                <button class="btn btn-sm btn-success">{{ _l('cdn.operator.restore-user') }}</button>
+                            </form>
+                        </div>
                     <?php else : ?>
                         <form method="POST" action="{{ route('cdn-admin.operator.users.status', ['id' => $user['id']]) }}" class="mb-3">
                             <?= csrf() ?>

@@ -31,8 +31,6 @@ class Operator
 
         if (!Auth::check()) $this->error();
 
-        Http::$error_view = 'errors.admin';
-
         if (!Tenant::isOperator()) abort(404);
 
         return true;

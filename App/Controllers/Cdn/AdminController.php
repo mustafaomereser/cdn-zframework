@@ -211,6 +211,12 @@ class AdminController
     public function fileDelete(string $id): mixed
     {
         $file = Tenant::file($id);
+
+        # A suspended project does not change. Otherwise "suspended" means the
+        # urls are off and the account can still delete what it was suspended
+        # over.
+        if ($refusal = $this->refused(Tenant::bucket((int) $file['bucket_id']))) return $refusal;
+
         Uploader::delete($file);
 
         Flash::success(_l('cdn.alerts.file-deleted', ['path' => $file['path']]));
@@ -328,6 +334,8 @@ class AdminController
     public function bucketDelete(string $id): mixed
     {
         $bucket = Tenant::bucket($id);
+
+        if ($refusal = $this->refused($bucket)) return $refusal;
 
         # The files go first, so their bytes lose their references and the
         # collector can reclaim them. Dropping the bucket alone would leave the
@@ -617,6 +625,12 @@ class AdminController
             return back();
         }
 
+        if (($project['status'] ?? 'active') !== 'active') {
+            Flash::danger(_l('cdn.upload-errors.project-suspended'));
+
+            return back();
+        }
+
         $files = (new Files)->where('project_id', $project['id'])->closureMode(false)->get();
 
         foreach ($files as $file) Uploader::delete($file);
@@ -716,6 +730,24 @@ class AdminController
                 . '/' . $project['slug'] . '/' . $bucket['slug'] . '/' . $path;
 
         return Signature::url($project['slug'], $bucket['slug'], $path, ['bucket' => $bucket, 'ttl' => 3600]);
+    }
+
+    /**
+     * Refuse a write to a suspended project, in words.
+     *
+     * Reads are untouched by a suspension - the panel still lists everything -
+     * so this is only on the paths that change something.
+     *
+     * @param array $bucket
+     * @return mixed Null when it may proceed.
+     */
+    private function refused(array $bucket): mixed
+    {
+        if (!$reason = \App\Cdn\Guard::frozen($bucket)) return null;
+
+        Flash::danger(_l('cdn.upload-errors.' . $reason));
+
+        return back();
     }
 
     /**

@@ -41,6 +41,13 @@ return [
         'delete-account'  => 'Delete account and files',
         'custom-quota'    => 'A quota just for this project',
         'custom-quota-help' => 'Off, it follows {user} and is rewritten when their allowance changes. On, it keeps these numbers.',
+        'is-suspended-user'    => 'This account is suspended.',
+        'is-suspended-project' => 'This project is suspended.',
+        'restore-question-user'    => 'It cannot sign in, its URLs answer 403, and nothing can be uploaded or deleted. Its files are untouched.',
+        'restore-question-project' => 'Its URLs answer 403 and nothing can be uploaded to it or deleted from it. Its files are untouched.',
+        'restore-user'    => 'Restore this account',
+        'restore-project' => 'Restore this project',
+        'suspend-help'    => 'Stops it serving and stops anything being written to it. Nothing is deleted, and the reason is shown to the owner.',
         'reason'          => 'Reason',
         'reason-holder'   => 'Why — the owner sees this',
         'reason-help'     => 'Shown to the owner. Without one they only see that it stopped working.',
@@ -540,6 +547,8 @@ return [
     ],
 
     'upload-errors' => [
+        'project-suspended' => 'This project is suspended - nothing can be uploaded to it or deleted from it. Ask the operator of this installation why.',
+        'bucket-inactive'   => 'This bucket is not active - nothing can be written to it.',
         'extension-blocked'      => 'That file type cannot be uploaded - it is one that can execute on a server.',
         'extension-not-allowed'  => 'This bucket does not accept that file type.',
         'mime-not-allowed'       => 'This bucket does not accept that content type.',

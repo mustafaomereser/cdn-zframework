@@ -77,6 +77,14 @@ class Uploader
             $mime = Support::mime($path, $mime);
         }
 
+        # Checked here rather than in each caller: the panel, the api, a url
+        # fetch and a resumable upload all end up in this method, and a rule
+        # enforced in four places is a rule enforced in three.
+        if ($reason = Guard::frozen($bucket)) {
+            @unlink($source);
+            return ['ok' => false, 'error' => $reason];
+        }
+
         if ($reason = Guard::acceptable($bucket, $mime, $extension)) {
             @unlink($source);
             return ['ok' => false, 'error' => $reason];
@@ -267,6 +275,7 @@ class Uploader
         if ($path === false) return ['ok' => false, 'error' => 'invalid-path'];
 
         # Refused now rather than after the client has spent an hour uploading.
+        if ($reason = Guard::frozen($bucket)) return ['ok' => false, 'error' => $reason];
         if ($reason = Guard::acceptable($bucket, (string) ($meta['mime'] ?? Support::mime($path)), Support::extension($path))) return ['ok' => false, 'error' => $reason];
 
         $uploadId = Support::token(20);

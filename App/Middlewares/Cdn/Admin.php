@@ -32,9 +32,6 @@ class Admin
         if (!Support::config('admin.enabled', true)) abort(404);
         if (!Auth::check()) $this->error();
 
-        # The panel renders inside the application's admin error pages, so a 404
-        # in it looks like the panel rather than like the public site.
-        Http::$error_view = 'errors.admin';
 
         return true;
     }

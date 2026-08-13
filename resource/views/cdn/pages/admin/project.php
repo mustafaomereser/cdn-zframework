@@ -180,21 +180,35 @@ $split = function (int $bytes) use ($units): array {
             <div class="card-body">
                 <h6>{{ _l('cdn.operator.project-actions') }}</h6>
 
-                <form method="POST" action="{{ route('cdn-admin.operator.projects.status', ['id' => $project['id']]) }}" class="mb-3">
-                    <?= csrf() ?>
-                    <input type="hidden" name="status" value="<?= $suspended ? 'active' : 'suspended' ?>">
+                <?php if ($suspended) : ?>
+                    <div class="state-box mb-3">
+                        <div class="mb-1"><b><?= _l('cdn.operator.is-suspended-project') ?></b></div>
 
-                    <?php if (!$suspended) : ?>
+                        <?php if ($project['suspend_reason'] ?? '') : ?>
+                            <div class="small mb-2"><?= _l('cdn.operator.reason') ?>: <?= e((string) $project['suspend_reason'], false) ?></div>
+                        <?php endif ?>
+
+                        <div class="hint small mb-2"><?= _l('cdn.operator.restore-question-project') ?></div>
+
+                        <form method="POST" action="{{ route('cdn-admin.operator.projects.status', ['id' => $project['id']]) }}">
+                            <?= csrf() ?>
+                            <input type="hidden" name="status" value="active">
+                            <button class="btn btn-sm btn-success">{{ _l('cdn.operator.restore-project') }}</button>
+                        </form>
+                    </div>
+                <?php else : ?>
+                    <form method="POST" action="{{ route('cdn-admin.operator.projects.status', ['id' => $project['id']]) }}" class="mb-3">
+                        <?= csrf() ?>
+                        <input type="hidden" name="status" value="suspended">
+
                         <label class="form-label small mb-1">{{ _l('cdn.operator.reason') }}</label>
                         <div class="input-group input-group-sm">
                             <input name="reason" class="form-control" maxlength="255" placeholder="{{ _l('cdn.operator.reason-holder') }}">
                             <button class="btn btn-outline-warning">{{ _l('cdn.operator.suspend') }}</button>
                         </div>
-                        <div class="form-text">{{ _l('cdn.operator.reason-help') }}</div>
-                    <?php else : ?>
-                        <button class="btn btn-sm btn-outline-success">{{ _l('cdn.operator.restore') }}</button>
-                    <?php endif ?>
-                </form>
+                        <div class="form-text">{{ _l('cdn.operator.suspend-help') }}</div>
+                    </form>
+                <?php endif ?>
 
                 <form method="POST" action="{{ route('cdn-admin.operator.projects.bandwidth', ['id' => $project['id']]) }}"
                       data-confirm="<?= e(_l('cdn.operator.reset-confirm'), false) ?>">

@@ -1002,6 +1002,15 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 
 .minify-note i.bi-scissors { color: var(--accent-ink); margin-right: 4px; }
 
+/* What is true right now, above the button that changes it. */
+.state-box {
+    border: 1px solid #f0c2b8;
+    background: var(--bad-wash);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: .875rem;
+}
+
 /* The upload bar, and what came back. */
 .upload-progress { margin-top: 16px; }
 .upload-bar { height: 8px; background: var(--surface-3); border-radius: 99px; }

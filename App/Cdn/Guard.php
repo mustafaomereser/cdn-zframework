@@ -216,6 +216,31 @@ class Guard
     }
 
     /**
+     * Whether anything may be written to this bucket at all.
+     *
+     * Suspending a project stops it serving. It has to stop it changing too, or
+     * "suspended" means "the urls are off but carry on filling the disk" - and
+     * an account suspended for what it was storing can go on storing it, and
+     * delete what it was suspended over.
+     *
+     * Reads are untouched: the panel still lists the files, and the owner can
+     * still see what they have. Nothing is destroyed by a suspension.
+     *
+     * @param array $bucket
+     * @return string|null Reason, or null when writable.
+     */
+    public static function frozen(array $bucket): ?string
+    {
+        if (($bucket['status'] ?? 'active') !== 'active') return 'bucket-inactive';
+
+        $project = Registry::project((int) ($bucket['project_id'] ?? 0));
+
+        if ($project && ($project['status'] ?? 'active') !== 'active') return 'project-suspended';
+
+        return null;
+    }
+
+    /**
      * Whether a mime type may be stored in a bucket.
      *
      * @param array  $bucket
