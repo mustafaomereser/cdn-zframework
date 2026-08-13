@@ -18,16 +18,27 @@ class LanguageController extends Controller
     /**
      * Switch to a language.
      *
-     * A language that has no file yet is not an error - it is the normal way a
-     * language starts. The visitor is sent to the page that builds it and comes
-     * back here when it is done.
+     * A language with no file yet is not an error - it is the normal way a
+     * language starts. Neither is one that is a few strings short: the
+     * interface grows, and a file built last month does not have the words that
+     * were added since. Both go to the page that fills in what is missing and
+     * come back here when it is done.
+     *
+     * The completeness check reads two files and walks them. That is fine here
+     * and nowhere else: this runs when somebody picks a language from a menu,
+     * not on the pages they read afterwards.
      *
      * @param string $lang
      * @return mixed
      */
     public function set($lang)
     {
-        if (Locale::known($lang) && !Locale::ready($lang) && Locale::buildable()) {
+        # Never the hand-written ones. A gap in those is somebody's to fill, not
+        # the engine's, and sending them here would mean an untranslated line in
+        # Turkish got a machine translation nobody asked for.
+        $machine = Locale::known($lang) && !in_array($lang, Locale::native(), true);
+
+        if ($machine && Locale::buildable() && !Locale::complete($lang)) {
             return redirect(route('language.prepare', ['lang' => $lang]) . '?next=' . urlencode($this->next()));
         }
 
@@ -46,15 +57,23 @@ class LanguageController extends Controller
     {
         if (!Locale::known($lang) || in_array($lang, Locale::native(), true)) return abort(404);
 
-        # Already there - somebody else built it while this link was sitting in
-        # a tab, or the visitor reloaded after it finished.
-        if (Locale::ready($lang)) {
+        # Already there - somebody else finished it while this link was sitting
+        # in a tab, or the visitor reloaded after it finished.
+        if (Locale::complete($lang)) {
             Lang::locale($lang);
 
             return redirect($this->next());
         }
 
-        if (!Locale::buildable()) return abort(404);
+        # Not buildable and incomplete is still better than not offered: the
+        # file that exists is what they get, holes and all.
+        if (!Locale::buildable()) {
+            if (!Locale::ready($lang)) return abort(404);
+
+            Lang::locale($lang);
+
+            return redirect($this->next());
+        }
 
         return view('cdn.language', [
             'code'     => $lang,

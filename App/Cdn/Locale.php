@@ -97,7 +97,11 @@ class Locale
     }
 
     /**
-     * Does a usable file exist for it?
+     * Does a file exist for it?
+     *
+     * Cheap on purpose - the switcher asks this once per language on every page
+     * render, so it is a stat and nothing more. Whether that file is still
+     * *complete* is a different question with a different cost; see complete().
      *
      * @param string $code
      * @return bool
@@ -105,6 +109,28 @@ class Locale
     public static function ready(string $code): bool
     {
         return is_file(self::path($code));
+    }
+
+    /**
+     * Does it have every string the interface now has?
+     *
+     * A generated language is a snapshot of the English file on the day it was
+     * built. Add a page to the panel and every one of them is a few strings
+     * short - and a missing string renders as nothing at all, so the gap shows
+     * up as a button with no label rather than as an error anybody would
+     * report.
+     *
+     * This walks both files, so it is not for a page render. It is for the
+     * moment somebody picks a language, which happens once.
+     *
+     * @param string $code
+     * @return bool
+     */
+    public static function complete(string $code): bool
+    {
+        if (!self::ready($code)) return false;
+
+        return Translator::missing(self::source(), (array) include(self::path($code))) === 0;
     }
 
     /**
