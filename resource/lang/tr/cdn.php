@@ -29,6 +29,8 @@ return [
     ],
 
     'cpanel' => [
+        'testing'             => "cPanel'e soruluyor…",
+        'no-route'            => 'Panel bu adresi henüz tanımıyor. Rota tablosu önbellekte: `php terminal route cache` komutunu tekrar çalıştır ya da önbelleği temizle.',
         'test'                => 'Bağlantıyı dene',
         'test-ok'             => 'Bağlandı. cPanel cevap verdi.',
         'test-not-configured' => 'Önce sunucu adını, kullanıcı adını ve anahtarı doldur.',

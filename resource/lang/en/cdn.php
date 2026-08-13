@@ -29,6 +29,8 @@ return [
     ],
 
     'cpanel' => [
+        'testing'             => 'Asking cPanel…',
+        'no-route'            => 'This panel does not know that address yet. The route table is cached: run `php terminal route cache` again, or clear it.',
         'test'                => 'Test the connection',
         'test-ok'             => 'Connected. cPanel answered.',
         'test-not-configured' => 'Fill in the host, the username and the token first.',

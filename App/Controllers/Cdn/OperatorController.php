@@ -13,6 +13,7 @@ use App\Cdn\Transform;
 use zFramework\Core\Facades\Alerts;
 use zFramework\Core\Facades\Auth;
 use zFramework\Core\Facades\Response;
+use zFramework\Core\Helpers\Http;
 use zFramework\Core\Helpers\File;
 
 /**
@@ -245,17 +246,28 @@ class OperatorController
     {
         $result = \App\Cdn\Hosting::test();
 
-        if ($result['ok']) {
-            Flash::success(_l('cdn.cpanel.test-ok'));
+        $message = _l('cdn.cpanel.test-' . $result['message']);
 
-            return back();
+        # Answered in place when the page asked over ajax. A test whose result
+        # only arrives after a redirect is a test that looks like it did
+        # nothing, which is exactly what it is not for.
+        if (Http::isAjax()) {
+            return Response::json([
+                'ok'      => $result['ok'],
+                'message' => $message,
+
+                # The raw line, because the fix is usually in it: a refused
+                # connection names the port, a rejection names the code.
+                'detail'  => $result['detail'],
+            ], JSON_UNESCAPED_UNICODE);
         }
 
-        Flash::danger(_l('cdn.cpanel.test-' . $result['message']));
+        if ($result['ok']) Flash::success($message);
+        else {
+            Flash::danger($message);
 
-        # The raw line underneath, because the fix is usually in it - a refused
-        # connection names the port, a rejection names the code.
-        if ($result['detail']) Flash::danger($result['detail']);
+            if ($result['detail']) Flash::danger($result['detail']);
+        }
 
         return back();
     }

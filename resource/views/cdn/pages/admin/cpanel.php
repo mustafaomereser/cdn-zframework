@@ -61,7 +61,11 @@
                     <h6 class="mb-0">{{ _l('cdn.cpanel.usage') }}</h6>
 
                     <?php if ($configured) : ?>
-                        <form method="POST" action="{{ route('cdn-admin.operator.cpanel.test') }}">
+                        <?php # Posts normally with javascript off; with it on
+                              # the answer is written into the box below,
+                              # because a result that only arrives after a
+                              # redirect looks like nothing happened. ?>
+                        <form method="POST" action="{{ route('cdn-admin.operator.cpanel.test') }}" id="cpanel-test">
                             <?= csrf() ?>
                             <button class="btn btn-sm btn-outline-secondary text-nowrap">
                                 <i class="bi bi-plug"></i> {{ _l('cdn.cpanel.test') }}
@@ -69,6 +73,8 @@
                         </form>
                     <?php endif ?>
                 </div>
+
+                <div id="cpanel-result" class="alert small d-none"></div>
 
                 <?php if (!$configured) : ?>
                     <p class="hint mb-0">{{ _l('cdn.cpanel.not-connected') }}</p>
@@ -194,4 +200,64 @@
         <?php endif ?>
     </div>
 </div>
+@endsection
+
+@section('footer')
+<script>
+    (function () {
+        const form   = document.getElementById('cpanel-test');
+        const box    = document.getElementById('cpanel-result');
+
+        if (!form) return;
+
+        const button = form.querySelector('button');
+        const texts  = <?= json_encode([
+                           'testing' => _l('cdn.cpanel.testing'),
+                           'route'   => _l('cdn.cpanel.no-route'),
+                       ], JSON_UNESCAPED_UNICODE) ?>;
+
+        function show(kind, message, detail) {
+            box.className = 'alert small alert-' + kind;
+            box.textContent = message;
+
+            if (detail) {
+                const line = document.createElement('div');
+
+                line.className   = 'mono mt-1 small';
+                line.textContent = detail;
+
+                box.appendChild(line);
+            }
+        }
+
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            button.disabled = true;
+            show('secondary', texts.testing, null);
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                });
+
+                // A 404 here means the route table is cached and does not have
+                // this route yet - `php terminal route cache` again, or clear
+                // it. Said out loud, because the symptom is a button that
+                // appears to do nothing.
+                if (response.status === 404) return show('warning', texts.route, 'HTTP 404');
+
+                const payload = await response.json();
+
+                show(payload.ok ? 'success' : 'danger', payload.message, payload.detail);
+            } catch (thrown) {
+                show('danger', String(thrown), null);
+            }
+
+            button.disabled = false;
+        });
+    })();
+</script>
 @endsection
