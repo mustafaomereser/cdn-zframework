@@ -26,7 +26,7 @@ return [
     'x-powered-by'     => true,  # set false to hide X-Powered-By response header.
 
     'lang'        => 'tr', # if browser haven't language in Languages list auto choose that default lang.
-    'title'       => 'zFramework',
+    'title'       => 'CDN zFramework',
     'public'      => 'public_html',
     'version'     => '1.0.0',
 
