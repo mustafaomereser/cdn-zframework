@@ -13,10 +13,10 @@ $peak = max(1, max(array_map(fn($day) => (int) $day['requests'], $series ?: [['r
 
 @if(!count($buckets))
 <div class="card mb-4">
-    <div class="card-body text-center py-5">
-        <i class="bi bi-folder-plus" style="font-size: 2rem; color: #0d6efd"></i>
-        <h5 class="mt-3">Make a bucket first</h5>
-        <p class="hint mb-4" style="max-width: 480px; margin: 0 auto">
+    <div class="empty">
+        <i class="bi bi-folder-plus"></i>
+        <h5>Make a bucket first</h5>
+        <p class="hint">
             A bucket is a folder with rules — how long browsers cache it, whether the URLs are public, what may be
             uploaded. Its name becomes the first part of every URL it serves.
         </p>

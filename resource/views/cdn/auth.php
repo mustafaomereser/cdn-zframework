@@ -2,7 +2,14 @@
 @section('title', 'Sign in')
 
 @section('body')
-<div class="container py-5" style="max-width: 460px">
+<div class="container py-5" style="max-width: 440px">
+
+    <div class="text-center mb-4">
+        <h4 class="mb-1">Welcome</h4>
+        <div class="hint">Your files, your URLs, your rules.</div>
+    </div>
+
+    <div class="auth-card">
 
     <ul class="nav nav-pills nav-fill mb-4" id="auth-tabs">
         <li class="nav-item">
@@ -79,12 +86,14 @@
 
                 <button class="btn btn-primary w-100">Create account</button>
 
-                <p class="small text-secondary mt-3 mb-0">
+                <p class="hint mt-3 mb-0">
                     You get a project, a first bucket and a URL to serve from, straight away.
                 </p>
             </form>
         </div>
         @endif
+    </div>
+
     </div>
 </div>
 @endsection

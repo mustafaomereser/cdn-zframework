@@ -75,5 +75,5 @@
     </div>
 </div>
 
-<div class="mt-3"><?= $files['links']() ?></div>
+<div class="mt-3"><?= $files['links']('cdn.pagination') ?></div>
 @endsection

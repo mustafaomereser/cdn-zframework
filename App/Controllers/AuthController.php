@@ -122,6 +122,12 @@ class AuthController extends Controller
         Auth::logout();
         Alerts::success('Signed out.');
 
+        # A plain form post gets a redirect; only a caller that asked for json
+        # gets json. Signing out through a script means a broken script - a cdn
+        # that failed to load, an error earlier in the file - locks somebody
+        # into a session they cannot end.
+        if (!\zFramework\Core\Helpers\Http::isAjax()) redirect('/');
+
         return Response::json(['status' => 1, 'redirect' => '/']);
     }
 

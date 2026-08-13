@@ -83,7 +83,7 @@
             </div>
         </div>
 
-        <div class="mt-3"><?= $logs['links']() ?></div>
+        <div class="mt-3"><?= $logs['links']('cdn.pagination') ?></div>
 
         <p class="hint mt-2">
             A refused request says why in the path column — an expired signature, a blocked referer, a rate limit.
