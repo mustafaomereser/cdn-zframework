@@ -50,6 +50,17 @@ class AuthController extends Controller
         $response = ['status' => 0];
 
         if (Auth::attempt(['email' => $validate['email'], 'password' => $validate['password']], (bool) $validate['keep-logged-in'])) {
+            # Suspended after the credentials, not before: answering differently
+            # to a suspended account and a wrong password tells anybody who asks
+            # which addresses have accounts here.
+            if ((string) (Auth::user()['status'] ?? 'active') === 'suspended') {
+                Auth::logout();
+
+                Alerts::danger(_l('cdn.alerts.suspended'));
+
+                return Response::json($response);
+            }
+
             $response['status'] = 1;
 
             # The project is created on first sign-in when the account predates

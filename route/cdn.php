@@ -3,8 +3,10 @@
 use App\Controllers\Cdn\AdminController;
 use App\Controllers\Cdn\ApiController;
 use App\Controllers\Cdn\DeliveryController;
+use App\Controllers\Cdn\OperatorController;
 use App\Middlewares\Cdn\Admin;
 use App\Middlewares\Cdn\ApiKey;
+use App\Middlewares\Cdn\Operator;
 use zFramework\Core\Route;
 
 /**
@@ -109,5 +111,30 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin'), '/cdn-admin')
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/settings/projects', [AdminController::class, 'projectCreate'])->name('projects.create');
         Route::post('/settings/projects/{id}', [AdminController::class, 'projectSave'])->name('projects.save');
+    });
+
+# Administering the installation rather than a project. Its own middleware, not
+# a branch inside the pages above: what keeps one customer out of another's
+# files everywhere else is that the queries cannot express it, and these pages
+# exist precisely to express it.
+Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin') . '/admin', '/cdn-admin.operator')
+    ->middleware([Operator::class])
+    ->group(function () {
+
+        Route::get('/', [OperatorController::class, 'users'])->name('users');
+        Route::get('/projects', [OperatorController::class, 'projects'])->name('projects');
+        Route::get('/system', [OperatorController::class, 'system'])->name('system');
+        Route::get('/log', [OperatorController::class, 'audits'])->name('audits');
+
+        Route::post('/users/{id}/status', [OperatorController::class, 'userStatus'])->name('users.status');
+        Route::post('/users/{id}/operator', [OperatorController::class, 'operator'])->name('users.operator');
+        Route::post('/users/{id}/delete', [OperatorController::class, 'userDelete'])->name('users.delete');
+
+        Route::post('/projects/{id}/quota', [OperatorController::class, 'quota'])->name('projects.quota');
+        Route::post('/projects/{id}/bandwidth', [OperatorController::class, 'bandwidthReset'])->name('projects.bandwidth');
+        Route::post('/projects/{id}/status', [OperatorController::class, 'projectStatus'])->name('projects.status');
+
+        Route::get('/console', [OperatorController::class, 'console'])->name('console');
+        Route::post('/console', [OperatorController::class, 'consoleRun'])->name('console.run');
     });
 #endregion

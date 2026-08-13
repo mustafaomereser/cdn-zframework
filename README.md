@@ -25,7 +25,7 @@ and run it for other people.
 6. [The API](#6-the-api)
 7. [Signed URLs](#7-signed-urls)
 8. [The panel, page by page](#8-the-panel-page-by-page)
-9. [Accounts, quotas and access](#9-accounts-quotas-and-access)
+9. [Accounts, quotas and access](#9-accounts-quotas-and-access) · [Operators](#operators) · [Console](#the-console)
 10. [Command line](#10-command-line) · [Languages](#101-languages)
 11. [Cron](#11-cron)
 12. [Configuration](#12-configuration)
@@ -458,8 +458,11 @@ appears once, at creation.
 how long each took. *Cache clears*: what you have purged, and what it removed.
 
 **Settings** — your project name and quota use, the API address, a copy-paste
-curl example. Operators also see what the machine can do, disk space, every
-project's usage and the maintenance commands.
+curl example.
+
+**Administration** — operators only, and a separate area rather than extra rows
+on the pages above: Accounts, Projects (the quota form), Installation, Log, and
+the Console when it is on. See [Operators](#operators).
 
 ---
 
@@ -482,25 +485,66 @@ ones by inserting a user row, and their project appears on first sign-in.
 
 ### Operators
 
-An operator administers the installation rather than a project: system health,
-disk space, every project's usage.
+An operator administers the installation rather than a project: accounts,
+quotas, system health. They get their own area in the panel — **Administration**
+in the sidebar — with four pages, and a fifth when the console is on:
+
+| page | what it is for |
+|---|---|
+| Accounts | everybody with an account, what they store and transfer, suspend / restore / promote / delete |
+| Projects | the quota form: storage and monthly transfer per project, reset this month's counter, suspend a project |
+| Installation | what this machine can actually do (image engine, formats, cache, finfo), disks and free space |
+| Log | who changed what, with the numbers before and after |
+| Console | run `php cdn` and `php terminal` commands — off by default, see below |
+
+Three ways to be an operator, in this order:
 
 ```php
+// config/cdn.php
 'auth' => [
-    'operators' => ['you@example.com'],
+    'operators' => ['you@example.com'],   // 1. a file, so a form cannot revoke it
 ],
 ```
 
-Empty means **the first registered account** — somebody has to be, and on a
-fresh install there is nobody to grant it.
+2. `users.is_operator`, set from the Accounts page. Only consulted while the
+   list above is **empty** — a list in the config file is the whole answer when
+   it exists, and the panel says so rather than writing a column nothing reads.
+3. Failing both, **the first registered account**. Somebody has to be, and on a
+   fresh install there is nobody to grant it. It stands down as soon as
+   `auth.operators` names anybody.
 
-Operators have their own project like everyone else. There is no "see another
-project's files": the scoping is structural, not a permission that can be
-granted.
+Keep at least one address in `auth.operators` on a real installation. It is the
+way back in if the column ever leaves nobody holding the keys.
+
+Operators still have their own project like everyone else, and the rest of the
+panel shows them only that. There is no "see another project's files": the
+scoping is structural rather than a permission, and the operator pages are a
+separate route group behind their own middleware rather than an `if` inside the
+normal ones.
+
+**Suspending** an account signs it out of the panel and stops its projects
+serving — `403` at the delivery path — without touching a byte. **Deleting**
+one removes its files properly: each file releases its object's reference so the
+collector can reclaim the bytes, which is what dropping rows would not do.
+
+Every change here writes a row to `cdn_audits`: who, what, the subject, the
+before and after, and the address it came from. Nothing on the delivery path
+writes to that table, so it stays small and is never pruned.
 
 ### Quotas
 
-Applied when a project is created:
+Two of them, per project, both in bytes, both `0` for unlimited:
+
+| | enforced where | what happens when it is spent |
+|---|---|---|
+| `storage_quota` | upload | the upload is refused |
+| `bandwidth_quota` | delivery | `509` until the month rolls over |
+
+The transfer counter belongs to a month (`bandwidth_period`, `YYYY-MM`). A row
+still carrying last month's period reads as zero rather than being reset on a
+read — the delivery path never writes to fix bookkeeping.
+
+New projects start from:
 
 ```php
 'auth' => [
@@ -512,8 +556,48 @@ Applied when a project is created:
 ],
 ```
 
-Storage full → uploads refused. Transfer spent → delivery answers `509` until
-the month rolls over. Change an existing project's quota in `cdn_projects`.
+Changing an existing one is the **Projects** page under Administration: a number
+and a unit rather than a byte count, because nobody types 214748364800 and
+everybody who has had to has typed it wrong once. Saving invalidates the
+registry cache, so a raised quota is felt by the person who was refused rather
+than up to `cache.registry-ttl` later.
+
+### The console
+
+Running `php cdn` and `php terminal` from the panel. This is a remote shell on a
+host whose whole job is to be reachable from the internet, so it is built to be
+defensible rather than convenient:
+
+```php
+'admin' => [
+    'console' => [
+        'enabled' => true,      // false takes the page away entirely — 404, nothing runs
+        'timeout' => 120,       // seconds; a command that never returns is a worker that never returns
+        'php'     => '',        // '' uses the running interpreter
+
+        'allow'   => [
+            'cdn'      => ['gc', 'verify', 'rollup', 'prune', 'stats', 'purge', 'sign', 'key', 'translate'],
+            'terminal' => ['route', 'cache', 'queue', 'security', 'bench'],
+        ],
+    ],
+],
+```
+
+- Operator only, behind the panel session and csrf.
+- `allow` is an allowlist of first words, not a denylist — a denylist is a list
+  of the dangerous things somebody thought of. `['*']` accepts everything that
+  script can do, which for `terminal` includes migrating the database and
+  rewriting the framework on disk.
+- Left out of the defaults on purpose: `db` (migrates, can drop columns),
+  `release` and `---update` (rewrite zFramework), `make` (writes php files into
+  the application), `test`.
+- **No shell.** Arguments are passed to `proc_open` as an array, so `;`, `|` and
+  `>` are arguments a command will not understand rather than a second command.
+- Every run is an audit row: the line, who ran it, and its exit code.
+
+It is not a sandbox. An allowed command does whatever that command does — `cdn
+gc` deletes files, because that is what it is for. The allowlist decides which
+programs may run, not what they may touch.
 
 ---
 
@@ -570,6 +654,11 @@ flight — and then the visitor carries on where they were, in their language.
 From then on it is a file like any other, for everybody. `i18n.on-demand.enabled`
 turns that off if you would rather the switcher only offered what you generated.
 
+Generated files are **not in the repository**: they are built on the machine
+that serves them, per installation. English and Turkish are written by hand and
+committed; everything else is `.gitignore`d, so a language somebody built by
+opening the menu is not something you have to review a pull request for.
+
 It is a **first draft**. Correct a line and it stays — running the command again
 only fills in values that are empty, unless you pass `--force`. `{placeholders}`
 and markup are masked out before the call and put back after, and the words in
@@ -600,23 +689,168 @@ the request log grows forever.
 
 ## 12. Configuration
 
-Everything is `config/cdn.php`, read per request — edit the file, no restart.
+One file: **`config/cdn.php`**. It is read per request, so an edit takes effect
+on the next one — there is nothing to restart and nothing to rebuild.
 
-| | |
+Per-bucket columns override most of the delivery, transform and security
+settings. Read this file as *the default a bucket inherits when it says
+nothing*.
+
+Every block is commented in place; this is the map.
+
+```php
+return [
+    'storage'   => [...],   // where the bytes live
+    'delivery'  => [...],   // what the public URL does
+    'signing'   => [...],   // signed URLs
+    'transform' => [...],   // image resizing
+    'upload'    => [...],   // what may be uploaded
+    'origin'    => [...],   // pull-through from a remote origin
+    'limits'    => [...],   // rate limiting
+    'security'  => [...],   // hotlinking, address rules, headers
+    'logging'   => [...],   // the request log and the counters
+    'cache'     => [...],   // lookup caching
+    'auth'      => [...],   // registration, operators, new-project defaults
+    'i18n'      => [...],   // languages
+    'admin'     => [...],   // the panel, and the console
+    'api'       => [...],   // the management API
+    'webhooks'  => [...],   // outbound notifications
+    'gc'        => [...],   // which housekeeping tasks run
+];
+```
+
+### storage
+
+```php
+'storage' => [
+    'disk'  => 'local',
+    'disks' => [
+        'local' => ['driver' => 'local', 'root' => BASE_PATH . '/storage/cdn/objects'],
+        // 'cold' => ['driver' => 'local', 'root' => 'D:/cdn-cold/objects'],
+    ],
+    'variants' => BASE_PATH . '/storage/cdn/variants',
+    'temp'     => BASE_PATH . '/storage/cdn/temp',
+    'fanout'   => 2,
+],
+```
+
+`root` is outside `public_html` on purpose: every byte leaves through the
+delivery route, which is where signing, hotlink rules and accounting are. A
+second disk is the simplest way to spread objects over more than one volume —
+point a bucket at it with `cdn_buckets.disk`.
+
+`variants` is a **cache**: safe to delete, expensive to lose all at once.
+`fanout: 2` stores objects as `ab/cd/<hash>`, which keeps any one directory
+small enough for a filesystem to list quickly.
+
+### delivery
+
+| key | what it decides |
 |---|---|
-| `storage` | disks, roots, fanout depth |
-| `delivery` | url prefix, path depth, ttl, ranges, compression, CORS, offload |
-| `signing` | key, algorithm, ttl, address binding, parameter names |
-| `transform` | driver, clamps, quality, formats, presets, cache size and ttl |
-| `upload` | size limits, chunk size, denylist, mime verification, svg sanitising, remote fetch |
-| `origin` | timeouts, size cap, negative ttl, stale-on-error |
-| `limits` | rate limiting per address, per key, per upload |
-| `security` | hotlink policy, address rules, response headers, forced downloads |
-| `logging` | driver, sample rate, retention, exact counters |
-| `auth` | registration, operators, new-project defaults |
-| `admin` / `api` | routes |
-| `webhooks` | timeouts, retries |
-| `gc` | which housekeeping tasks run |
+| `url-prefix` | where the delivery route is mounted (`/cdn`) |
+| `depth` | how many path segments after the bucket are matched. A file stored deeper is reachable through the API but not through a URL |
+| `default-ttl` | `max-age` when the bucket does not set one |
+| `immutable` | adds `immutable` to `Cache-Control`. Right for content-addressed URLs, **wrong** for a path you intend to overwrite |
+| `swr` | `stale-while-revalidate` seconds, `0` to omit |
+| `chunk` | read size while streaming, bytes |
+| `ranges` | `206` support. There is no reason to turn it off other than debugging |
+| `compress` | gzip for text-ish payloads that are not already compressed |
+| `cors` | origins, methods, exposed headers, preflight `max-age` |
+| `offload` | `false` \| `'x-sendfile'` \| `'x-accel-redirect'` |
+
+`offload` hands the file to the web server so PHP is free during the transfer.
+It needs `mod_xsendfile` (Apache) or an internal location (nginx) — **until that
+is configured, leave it false or every response is an empty 200.**
+
+### signing
+
+```php
+'signing' => [
+    'key'     => null,        // null falls back to config/crypt.php
+    'algo'    => 'sha256',
+    'ttl'     => 3600,
+    'bind-ip' => false,
+    'params'  => ['expires' => 'exp', 'signature' => 'sig', 'ip' => 'sip'],
+    'leeway'  => 30,
+],
+```
+
+Set `key` to rotate signing without invalidating cookies and tokens elsewhere in
+the app. Renaming a parameter in `params` breaks every link already issued —
+they are excluded from the signed payload **by name**.
+
+### transform
+
+Clamps first, because the parameters come from the URL: `max-width`,
+`max-height`, and `max-pixels` (checked against the source dimensions *before*
+decoding, which is what stops a 20000×20000 resample from spending the
+machine's memory).
+
+`auto-format` picks webp/avif from `Accept` and adds `Vary: Accept`.
+`signed-only` refuses unsigned transforms — worth turning on if the origin is
+public, because it stops a stranger filling the variant cache by walking
+`?w=1..5000`. `allowed-presets-only` refuses anything not named in `presets`.
+
+`cache.max-size` is what `cdn gc` evicts down to, LRU; `cache.ttl` is how long
+an unused derivative survives.
+
+### upload
+
+```php
+'upload' => [
+    'max-size'    => 512 * 1024 * 1024,
+    'blocked-ext' => ['php', 'phtml', 'phar', ...],
+    'allowed-ext' => [],          // empty = anything not blocked
+    'verify-mime' => true,
+    'sanitize-svg' => true,
+],
+```
+
+`blocked-ext` wins over `allowed-ext`. It is a denylist of things that execute
+on a misconfigured server: the point is that an upload directory is never also
+an execution directory, and this is the second lock.
+
+### limits, security, logging
+
+`limits` is per-address, per-key and per-upload rate limiting. `security` holds
+the hotlink policy (referer rules), address allow/deny, response headers and
+forced downloads. `logging` decides the driver, the sample rate and retention —
+and note `counters`, which is deliberately **not** sampled: bandwidth billing
+and storage quota have to be exact.
+
+### cache
+
+```php
+'cache' => ['registry-ttl' => 300],
+```
+
+Seconds a bucket or project row may be served from `GlobalCache`. Every write
+path invalidates its own key, so this is only the window for a change made
+*outside* the application — a row edited straight in the database.
+
+### auth
+
+Registration, operators and new-project defaults — see
+[Accounts, quotas and access](#9-accounts-quotas-and-access), which covers all
+three in full.
+
+### i18n
+
+Languages, and building a missing one on demand — see
+[Languages](#101-languages).
+
+### admin
+
+The panel's route and the console. See [The console](#the-console).
+
+### api, webhooks, gc
+
+`api.route` mounts the management API; `api.hmac` enables signed requests, where
+the client signs `(method, path, body hash, timestamp)` instead of sending the
+key secret — slower to implement, immune to a leaked log line.
+
+`webhooks` sets timeouts and retries. `gc` decides which housekeeping tasks the
+hourly cron actually runs.
 
 ---
 

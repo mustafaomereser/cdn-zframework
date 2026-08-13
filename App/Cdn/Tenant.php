@@ -249,22 +249,32 @@ class Tenant
     }
 
     /**
-     * Whether this user administers the installation itself - system health,
-     * every project's usage - rather than only their own.
+     * Whether this user administers the installation itself - accounts, quotas,
+     * system health - rather than only their own project.
      *
-     * The first account is an operator by default: somebody has to be, and on a
-     * fresh install there is nobody to grant it.
+     * Three ways to be one, in this order:
      *
+     *   1. Listed in `auth.operators`. A file, so it cannot be revoked from a
+     *      form - which is what makes it the way back in when the column below
+     *      has left nobody holding the keys.
+     *   2. users.is_operator, set from the operator panel.
+     *   3. The first registered account. Somebody has to be, and on a fresh
+     *      install there is nobody to grant it. This one stands down as soon as
+     *      `auth.operators` names anybody.
+     *
+     * @param array|null $user Defaults to the signed-in one.
      * @return bool
      */
-    public static function isOperator(): bool
+    public static function isOperator(?array $user = null): bool
     {
-        $user = Auth::user() ?: [];
+        $user ??= Auth::user() ?: [];
         if (!$user) return false;
 
         $operators = array_filter(array_map('strtolower', (array) Support::config('auth.operators', [])));
 
         if (count($operators)) return in_array(strtolower((string) ($user['email'] ?? '')), $operators, true);
+
+        if ((int) ($user['is_operator'] ?? 0) === 1) return true;
 
         $first = (new \App\Models\User)->closureMode(false)->orderBy(['id' => 'ASC'])->first();
 

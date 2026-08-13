@@ -22,6 +22,11 @@ $menu = [
     'cdn-admin.settings'  => ['bi-sliders',      'settings'],
 ];
 
+# The operator pages are a separate area, not a seventh item pretending to be
+# one of the six above: everything in the menu is scoped to this account, and
+# that link is the one place where it stops being.
+$operator = Tenant::isOperator();
+
 $current  = uri();
 $projects = Tenant::projects();
 $usage    = Tenant::usage();
@@ -90,6 +95,13 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
                     </div>
                 <?php endif ?>
             </div>
+
+            <?php if ($operator) : ?>
+                <hr>
+                <a href="{{ route('cdn-admin.operator.users') }}" class="<?= str_starts_with($current, rtrim(parse_url(route('cdn-admin.operator.users'), PHP_URL_PATH), '/')) ? 'active' : '' ?>">
+                    <i class="bi bi-shield-lock"></i> <?= _l('cdn.menu.operator') ?>
+                </a>
+            <?php endif ?>
 
             <a href="{{ route('docs') }}" target="_blank"><i class="bi bi-book"></i> <?= _l('cdn.menu.docs') ?></a>
             <a href="/" target="_blank"><i class="bi bi-box-arrow-up-right"></i> <?= _l('cdn.menu.public') ?></a>

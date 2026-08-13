@@ -21,6 +21,17 @@ class Users
             'email'     => ['varchar:50', 'unique:user'],
             'api_token' => ['varchar:60', 'required'],
 
+            # active | suspended. A suspended account cannot sign in and its
+            # projects stop serving; the files are untouched, which is the
+            # difference between suspending somebody and deleting them.
+            'status'    => ['varchar:20', 'default:active', 'index'],
+
+            # Set from the panel. `auth.operators` in config/cdn.php still wins
+            # and is the way back in if this column ever leaves nobody holding
+            # the keys - a list in a file cannot be revoked by a mistake in a
+            # form.
+            'is_operator' => ['tinyint:1', 'default:0'],
+
             'timestamps',
             'softDelete',
         ];

@@ -82,8 +82,14 @@ return [
             'min-size' => 1024,
             'level'    => 5,
             'types'    => [
-                'text/', 'application/json', 'application/javascript', 'application/xml',
-                'image/svg+xml', 'application/wasm', 'font/ttf', 'font/otf',
+                'text/',
+                'application/json',
+                'application/javascript',
+                'application/xml',
+                'image/svg+xml',
+                'application/wasm',
+                'font/ttf',
+                'font/otf',
             ],
         ],
 
@@ -190,9 +196,32 @@ return [
 
         'allowed-ext' => [],   # empty = anything not blocked
         'blocked-ext' => [
-            'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'phar', 'inc',
-            'exe', 'dll', 'so', 'bat', 'cmd', 'com', 'scr', 'msi', 'jar',
-            'sh', 'bash', 'ps1', 'psm1', 'vbs', 'js.map.php', 'htaccess', 'htpasswd',
+            'php',
+            'php3',
+            'php4',
+            'php5',
+            'php7',
+            'php8',
+            'phtml',
+            'phar',
+            'inc',
+            'exe',
+            'dll',
+            'so',
+            'bat',
+            'cmd',
+            'com',
+            'scr',
+            'msi',
+            'jar',
+            'sh',
+            'bash',
+            'ps1',
+            'psm1',
+            'vbs',
+            'js.map.php',
+            'htaccess',
+            'htpasswd',
         ],
 
         # Verify the declared type against what the bytes say. A mismatch is
@@ -370,13 +399,27 @@ return [
         # What the switcher offers, in this order. A language does not need a
         # file to be listed - see on-demand below.
         'languages' => [
-            'en' => 'English',      'tr' => 'Türkçe',       'de' => 'Deutsch',
-            'fr' => 'Français',     'es' => 'Español',      'it' => 'Italiano',
-            'pt' => 'Português',    'nl' => 'Nederlands',   'pl' => 'Polski',
-            'ru' => 'Русский',      'uk' => 'Українська',   'el' => 'Ελληνικά',
-            'ar' => 'العربية',      'fa' => 'فارسی',        'az' => 'Azərbaycan',
-            'kk' => 'Қазақша',      'uz' => 'Oʻzbekcha',    'hi' => 'हिन्दी',
-            'zh-CN' => '简体中文',   'ja' => '日本語',        'ko' => '한국어',
+            'en' => 'English',
+            'tr' => 'Türkçe',
+            'de' => 'Deutsch',
+            'fr' => 'Français',
+            'es' => 'Español',
+            'it' => 'Italiano',
+            'pt' => 'Português',
+            'nl' => 'Nederlands',
+            'pl' => 'Polski',
+            'ru' => 'Русский',
+            'uk' => 'Українська',
+            'el' => 'Ελληνικά',
+            'ar' => 'العربية',
+            'fa' => 'فارسی',
+            'az' => 'Azərbaycan',
+            'kk' => 'Қазақша',
+            'uz' => 'Oʻzbekcha',
+            'hi' => 'हिन्दी',
+            'zh-CN' => '简体中文',
+            'ja' => '日本語',
+            'ko' => '한국어',
         ],
 
         # The file everything is translated from. English rather than Turkish
@@ -393,10 +436,35 @@ return [
         # looking for a word that appears nowhere in the product. Matched whole
         # and case-insensitively, longest first.
         'keep-words' => [
-            'CDN', 'API', 'URL', 'URLs', 'ETag', 'ETags', 'HTTP', 'CORS', 'gzip',
-            'bucket', 'buckets', 'webp', 'avif', 'jpg', 'png', 'gif', 'svg',
-            'cron', 'origin', 'hotlink', 'curl', 'HEAD', 'imagick', 'gd',
-            'redis', 'apcu', 'finfo', 'sha256', 'immutable',
+            'CDN',
+            'API',
+            'URL',
+            'URLs',
+            'ETag',
+            'ETags',
+            'HTTP',
+            'CORS',
+            'gzip',
+            'bucket',
+            'buckets',
+            'webp',
+            'avif',
+            'jpg',
+            'png',
+            'gif',
+            'svg',
+            'cron',
+            'origin',
+            'hotlink',
+            'curl',
+            'HEAD',
+            'imagick',
+            'gd',
+            'redis',
+            'apcu',
+            'finfo',
+            'sha256',
+            'immutable',
         ],
 
         'translator' => [
@@ -443,6 +511,46 @@ return [
     'admin' => [
         'enabled' => true,
         'route'   => '/panel',
+
+        /**
+         * Running `php terminal` and `php cdn` from the operator pages.
+         *
+         * This is a remote shell on a host that exists to be reachable from the
+         * internet. Set `enabled` to false to take the page away entirely - the
+         * route answers 404 and nothing can be run.
+         *
+         * What is already in place when it is on: operator only, the panel's
+         * session and csrf, no shell in the pipeline (arguments are passed as an
+         * array, so a `;` is an argument and not a second command), a timeout,
+         * and an audit row per run.
+         *
+         * allow    First words that may be run, per script. An allowlist, not a
+         *          denylist - a denylist is a list of the dangerous things
+         *          somebody thought of. `['*']` accepts everything that script
+         *          can do, which for `terminal` includes migrating the database
+         *          and rewriting the framework on disk.
+         *
+         *          Left out of the defaults on purpose: db (migrates, can drop
+         *          columns), release and ---update (rewrite zFramework), make
+         *          (writes php files into the application), test.
+         *
+         * timeout  Seconds. A command that never returns is a worker that never
+         *          returns.
+         *
+         * php      The binary to spawn. Empty uses the running interpreter,
+         *          which is right everywhere except a SAPI where PHP_BINARY is
+         *          the web server.
+         */
+        'console' => [
+            'enabled' => true,
+            'timeout' => 120,
+            'php'     => '',
+
+            'allow'   => [
+                'cdn'      => ['gc', 'verify', 'rollup', 'prune', 'stats', 'purge', 'sign', 'key', 'translate'],
+                'terminal' => ['route', 'cache', 'queue', 'security', 'bench'],
+            ],
+        ],
     ],
 
     /**

@@ -913,6 +913,50 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 .build-bar { height: 7px; background: var(--surface-3); border-radius: 99px; }
 .build-bar .progress-bar { background: var(--accent); transition: width .35s ease; }
 
+/* A select2 inside an input-group. Bootstrap lays an input-group out with
+   flex and only its own children take part; select2 replaces the select with
+   a span it knows nothing about, which then takes its natural width and drops
+   onto the line below. Prefer data-plain on the select where the native
+   control will do - this is for the cases where it will not. */
+.input-group > .select2-container { flex: 1 1 auto; width: 1% !important; }
+.input-group > .select2-container:not(:last-child) .select2-selection { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.input-group > .select2-container:not(:first-child) .select2-selection { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.input-group > .select2-container .select2-selection { height: 100%; }
+
+/* ---------------------------------------------------------------- operator */
+
+.op-tabs { gap: 4px; }
+
+.op-tabs .nav-link {
+    font-size: .875rem;
+    padding: .38rem .8rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--line);
+}
+
+.op-tabs .nav-link:hover { color: var(--ink); background: var(--surface-2); }
+.op-tabs .nav-link.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.op-tabs .nav-link i { font-size: .85rem; margin-right: 4px; }
+
+/* The console. A terminal, so it looks like one - dark whatever the rest is,
+   because output that is read as output should not be read as prose. */
+.console-out {
+    background: #0f1320;
+    color: #d6dcf0;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: .8125rem;
+    line-height: 1.55;
+    min-height: 220px;
+    max-height: 460px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+}
+
 .lang-switch { display: inline-flex; background: var(--surface-3); border-radius: var(--radius-sm); padding: 2px; }
 
 .lang-switch a {

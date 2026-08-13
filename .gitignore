@@ -23,3 +23,10 @@ CLAUDE.md
 rr
 rr.exe
 .rr.pid
+# Machine-built language files. `php cdn translate` writes them, and so does the
+# switcher when somebody picks a language nobody has read the site in yet - they
+# are built on the machine that serves them, per installation, rather than
+# carried in the repository. English and Turkish are written by hand and stay.
+resource/lang/*
+!resource/lang/en/
+!resource/lang/tr/
