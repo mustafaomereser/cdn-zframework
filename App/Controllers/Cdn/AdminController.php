@@ -23,7 +23,9 @@ use App\Models\Cdn\Variants;
 use zFramework\Core\Facades\Alerts;
 use zFramework\Core\Facades\Auth;
 use zFramework\Core\Facades\DB;
+use zFramework\Core\Facades\Response;
 use zFramework\Core\Facades\Session;
+use zFramework\Core\Helpers\Http;
 use zFramework\Core\Validator;
 
 /**
@@ -160,13 +162,37 @@ class AdminController
                 'uploaded_by' => 'panel:' . Auth::id(),
             ]);
         } else {
+            if (Http::isAjax()) return Response::json(['ok' => false, 'error' => _l('cdn.alerts.upload-empty')]);
+
             Flash::danger(_l('cdn.alerts.upload-empty'));
+
             return back();
         }
 
         Registry::forgetBucket($bucket);
 
         $done = array_values(array_filter($results, fn($result) => $result['ok']));
+
+        # The uploader answers the browser directly, so it can show what
+        # happened to each file next to the bar that was measuring it. The
+        # redirect below is still the answer for a form post without javascript.
+        if (Http::isAjax()) {
+            return Response::json([
+                'ok'    => count($done) > 0,
+                'files' => array_map(fn($result) => $result['ok']
+                    ? [
+                        'ok'   => true,
+                        'id'   => $result['file']['id'],
+                        'name' => $result['file']['name'],
+                        'path' => $result['file']['path'],
+                        'size' => (int) $result['file']['size'],
+                        'url'  => $this->url($bucket, $result['file']['path']),
+                        'page' => route('cdn-admin.files.show', ['id' => $result['file']['id']]),
+                    ]
+                    : ['ok' => false, 'name' => $result['name'] ?? null, 'error' => $this->reason($result)],
+                    $results),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
 
         if (count($done)) Flash::success(_l('cdn.alerts.uploaded', ['count' => count($done)]));
         foreach ($results as $result) if (!$result['ok']) Flash::danger($this->reason($result));

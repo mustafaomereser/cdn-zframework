@@ -252,6 +252,10 @@ return [
     ],
 
     'dashboard' => [
+        'uploading'     => 'Yükleniyor…',
+        'processing'    => 'Gönderildi — denetleniyor ve özetleniyor…',
+        'uploaded'      => 'Yüklendi',
+        'upload-failed' => 'Yükleme geçmedi.',
         'title'        => 'Genel bakış',
         'lede'         => 'Dosyayı bırak, adresini al. Gerisi isteğe bağlı.',
         'empty-title'  => 'Önce bir bucket oluştur',

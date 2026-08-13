@@ -80,12 +80,27 @@ $sentShare = $usage['bandwidth-quota'] > 0 ? min(100, round($usage['bandwidth'] 
                         </div>
                     </div>
 
-                    <button class="btn btn-primary btn-sm mt-3">
+                    <button class="btn btn-primary btn-sm mt-3" id="upload-go">
                         <i class="bi bi-cloud-arrow-up"></i> {{ _l('cdn.common.upload') }}
                     </button>
                 </div>
             </div>
         </form>
+
+        <?php # Filled in while the bytes are going up, and replaced by what
+              # came back. Hidden until there is something to say. ?>
+        <div id="upload-progress" class="upload-progress d-none">
+            <div class="d-flex justify-content-between small mb-1">
+                <span id="upload-state">{{ _l('cdn.dashboard.uploading') }}</span>
+                <span class="mono notranslate" translate="no" id="upload-count"></span>
+            </div>
+
+            <div class="progress upload-bar" role="progressbar">
+                <div class="progress-bar" id="upload-bar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div id="upload-results" class="upload-results d-none"></div>
     </div>
 </div>
 
@@ -283,5 +298,145 @@ $sentShare = $usage['bandwidth-quota'] > 0 ? min(100, round($usage['bandwidth'] 
         input.files = event.dataTransfer.files;
         describe();
     });
+
+    // ---------------------------------------------------------------- upload
+    //
+    // XMLHttpRequest rather than fetch: fetch has no upload progress, and a
+    // form that posts a hundred megabytes and shows nothing until the page
+    // reloads is a form people click twice.
+    //
+    // The form still works with javascript off - this only takes over the
+    // submit event, and the endpoint answers a redirect when it is not asked
+    // for json.
+    (function () {
+        const form    = document.querySelector('form[action="<?= route('cdn-admin.files.upload') ?>"]');
+        const button  = document.getElementById('upload-go');
+        const panel   = document.getElementById('upload-progress');
+        const bar     = document.getElementById('upload-bar');
+        const state   = document.getElementById('upload-state');
+        const counter = document.getElementById('upload-count');
+        const results = document.getElementById('upload-results');
+
+        if (!form) return;
+
+        const texts = <?= json_encode([
+                          'uploading' => _l('cdn.dashboard.uploading'),
+                          'processing' => _l('cdn.dashboard.processing'),
+                          'done'      => _l('cdn.dashboard.uploaded'),
+                          'failed'    => _l('cdn.dashboard.upload-failed'),
+                          'copy'      => _l('cdn.common.copy'),
+                          'open'      => _l('cdn.common.open'),
+                      ], JSON_UNESCAPED_UNICODE) ?>;
+
+        function size(bytes) {
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let index = 0;
+
+            while (bytes >= 1024 && index < units.length - 1) { bytes /= 1024; index++; }
+
+            return bytes.toFixed(bytes >= 100 || index === 0 ? 0 : 1) + units[index];
+        }
+
+        function escapeHtml(text) {
+            const box = document.createElement('div');
+            box.textContent = text;
+            return box.innerHTML;
+        }
+
+        form.addEventListener('submit', function (event) {
+            // Nothing chosen and no url: let the server say so.
+            if (!(input.files || []).length && !form.querySelector('[name=url]').value.trim()) return;
+
+            event.preventDefault();
+
+            const request = new XMLHttpRequest();
+            const data    = new FormData(form);
+
+            button.disabled = true;
+            results.classList.add('d-none');
+            results.innerHTML = '';
+            panel.classList.remove('d-none');
+            bar.style.width = '0%';
+            bar.classList.remove('bg-danger');
+            state.textContent = texts.uploading;
+            counter.textContent = '';
+
+            request.upload.addEventListener('progress', function (progress) {
+                if (!progress.lengthComputable) return;
+
+                const percent = Math.round((progress.loaded / progress.total) * 100);
+
+                bar.style.width = percent + '%';
+                counter.textContent = size(progress.loaded) + ' / ' + size(progress.total);
+
+                // The bytes are up; what is left is hashing, sniffing and
+                // storing them, which takes as long as it takes.
+                if (percent >= 100) state.textContent = texts.processing;
+            });
+
+            request.addEventListener('load', function () {
+                button.disabled = false;
+
+                let payload;
+
+                try { payload = JSON.parse(request.responseText); } catch (thrown) { payload = null; }
+
+                if (!payload) {
+                    state.textContent = texts.failed;
+                    bar.classList.add('bg-danger');
+                    return;
+                }
+
+                panel.classList.add('d-none');
+                results.classList.remove('d-none');
+
+                const rows = (payload.files || []).map(function (file) {
+                    if (!file.ok) {
+                        return '<div class="result bad"><i class="bi bi-exclamation-triangle"></i> '
+                            + '<span>' + escapeHtml(file.error || texts.failed) + '</span></div>';
+                    }
+
+                    return '<div class="result"><i class="bi bi-check2"></i>'
+                        + '<a class="mono truncate" href="' + file.page + '">' + escapeHtml(file.path) + '</a>'
+                        + '<span class="hint">' + size(file.size) + '</span>'
+                        + '<button type="button" class="btn btn-sm btn-outline-secondary" data-copy="' + escapeHtml(file.url) + '">'
+                        + '<i class="bi bi-clipboard"></i> ' + texts.copy + '</button>'
+                        + '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(file.url) + '" target="_blank">'
+                        + '<i class="bi bi-box-arrow-up-right"></i></a></div>';
+                });
+
+                if (payload.error) rows.push('<div class="result bad"><i class="bi bi-exclamation-triangle"></i> <span>'
+                    + escapeHtml(payload.error) + '</span></div>');
+
+                results.innerHTML = rows.join('');
+
+                // The copy buttons are new, so the handler bound at page load
+                // has never seen them.
+                $(results).find('[data-copy]').on('click', function () {
+                    navigator.clipboard.writeText($(this).data('copy'));
+
+                    const self = $(this), original = self.html();
+                    self.html('<i class="bi bi-check2"></i> <?= _l('cdn.common.copied') ?>');
+                    setTimeout(() => self.html(original), 1500);
+                });
+
+                // Clear the picker so a second click does not send the same
+                // files again.
+                input.value = '';
+                form.querySelector('[name=url]').value = '';
+                describe();
+            });
+
+            request.addEventListener('error', function () {
+                button.disabled = false;
+                state.textContent = texts.failed;
+                bar.classList.add('bg-danger');
+            });
+
+            request.open('POST', form.action);
+            request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            request.send(data);
+        });
+    })();
 </script>
 @endsection

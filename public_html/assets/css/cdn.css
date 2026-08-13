@@ -1002,6 +1002,29 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 
 .minify-note i.bi-scissors { color: var(--accent-ink); margin-right: 4px; }
 
+/* The upload bar, and what came back. */
+.upload-progress { margin-top: 16px; }
+.upload-bar { height: 8px; background: var(--surface-3); border-radius: 99px; }
+.upload-bar .progress-bar { background: var(--accent); transition: width .15s linear; }
+
+.upload-results { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+
+.upload-results .result {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--ok-wash);
+    font-size: .875rem;
+}
+
+.upload-results .result > i { color: var(--ok); }
+.upload-results .result a.mono { flex: 1 1 auto; min-width: 0; font-size: .8125rem; }
+.upload-results .result.bad { background: var(--bad-wash); }
+.upload-results .result.bad > i { color: var(--bad); }
+
 /* Where something sits: project / bucket / path. */
 .crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .875rem; color: var(--ink-3); }
 .crumbs a { color: var(--ink-2); font-weight: 500; }

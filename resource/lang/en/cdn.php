@@ -252,6 +252,10 @@ return [
     ],
 
     'dashboard' => [
+        'uploading'     => 'Uploading…',
+        'processing'    => 'Stored — checking and hashing…',
+        'uploaded'      => 'Uploaded',
+        'upload-failed' => 'The upload did not go through.',
         'title'        => 'Overview',
         'lede'         => 'Drop a file in, copy its URL out. Everything else is optional.',
         'empty-title'  => 'Make a bucket first',

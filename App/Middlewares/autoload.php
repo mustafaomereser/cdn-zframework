@@ -52,7 +52,7 @@ if (str_starts_with((string) $path, "$prefix/")) return;
 
 $list = [
     Language::class,
-    ViewDirectives::class
+    // ViewDirectives::class
 ];
 
 Middleware::middleware($list);
