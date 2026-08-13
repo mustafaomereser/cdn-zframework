@@ -155,6 +155,12 @@ $sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M')
                         <span><?= _l('cdn.common.of') ?> <span class="notranslate" translate="no">{{ File::humanFileSize($sentQuota) }}</span></span>
                         <b><?= $sentShare ?>%</b>
                     </div>
+
+                    <?php # Whose ceiling this one is, the same as the storage
+                          # bar above it says. ?>
+                    <?php if (($usage['scope'] ?? 'account') !== 'account') : ?>
+                        <div class="usage-note"><?= _l($usage['scope'] === 'project' ? 'cdn.projects.own-quota' : 'cdn.projects.account-wide') ?></div>
+                    <?php endif ?>
                 <?php endif ?>
             </div>
 

@@ -52,6 +52,19 @@ $split = function (int $bytes) use ($units): array {
             <div class="stat">
                 <div class="label"><i class="bi <?= $icon ?>"></i> <?= _l("cdn.operator.total-$key") ?></div>
                 <div class="value notranslate" translate="no"><?= $value ?></div>
+
+                <?php # Each allowance under the number it belongs to. ?>
+                <?php if ($key === 'stored') : ?>
+                    <div class="hint"><?= (int) $project['storage_quota'] > 0
+                        ? _l('cdn.common.of') . ' ' . File::humanFileSize((int) $project['storage_quota'])
+                        : _l('cdn.operator.unlimited') ?></div>
+                <?php endif ?>
+
+                <?php if ($key === 'transfer') : ?>
+                    <div class="hint"><?= (int) $project['bandwidth_quota'] > 0
+                        ? _l('cdn.common.of') . ' ' . File::humanFileSize((int) $project['bandwidth_quota'])
+                        : _l('cdn.operator.unlimited') ?></div>
+                <?php endif ?>
             </div>
         </div>
     <?php endforeach ?>

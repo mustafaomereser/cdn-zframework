@@ -111,7 +111,12 @@ $share = $usage['quota'] > 0 ? min(100, round($usage['used'] / $usage['quota'] *
                         <span><b class="notranslate" translate="no"><?= number_format(count($row['buckets'])) ?></b> <?= _l('cdn.projects.buckets') ?></span>
                         <span><b class="notranslate" translate="no"><?= number_format($row['files']) ?></b> <?= _l('cdn.common.files') ?></span>
                         <span class="notranslate" translate="no"><b>{{ File::humanFileSize($row['used']) }}</b></span>
-                        <span class="notranslate" translate="no"><i class="bi bi-arrow-down-up"></i> {{ File::humanFileSize($row['month']) }}</span>
+                        <span class="notranslate" translate="no">
+                            <i class="bi bi-arrow-down-up"></i> {{ File::humanFileSize($row['month']) }}
+                            <?php if ((int) $row['bandwidth_quota'] > 0) : ?>
+                                <span class="hint">/ {{ File::humanFileSize((int) $row['bandwidth_quota']) }}</span>
+                            <?php endif ?>
+                        </span>
                     </div>
 
                     <?php if ($row['quota'] > 0) : ?>

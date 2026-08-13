@@ -92,7 +92,19 @@ $prefix = rtrim((string) config('cdn.delivery.url-prefix'), '/');
                             <?php endif ?>
                         </td>
 
-                        <td class="text-end small notranslate" translate="no">{{ File::humanFileSize($month) }}</td>
+                        <td class="text-end small notranslate" translate="no">
+                            {{ File::humanFileSize($month) }}
+                            <?php # The same shape as the storage cell. A number
+                                  # with nothing to measure it against reads as
+                                  # though there were no transfer limit. ?>
+                            <?php if ((int) $project['bandwidth_quota'] > 0) : ?>
+                                <div class="hint">
+                                    {{ _l('cdn.common.of') }} {{ File::humanFileSize((int) $project['bandwidth_quota']) }}
+                                </div>
+                            <?php else : ?>
+                                <div class="hint">{{ _l('cdn.operator.unlimited') }}</div>
+                            <?php endif ?>
+                        </td>
 
                         <td class="text-end text-nowrap">
                             <a class="btn btn-sm btn-outline-secondary"
