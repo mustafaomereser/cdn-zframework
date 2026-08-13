@@ -58,7 +58,7 @@ class AuthController extends Controller
             Tenant::project();
 
             $response['redirect'] = $this->next();
-        } else Alerts::danger('E-mail or password does not match.');
+        } else Alerts::danger(_l('cdn.alerts.signin-failed'));
 
         return Response::json($response);
     }
@@ -72,7 +72,7 @@ class AuthController extends Controller
         # Checked here rather than only hidden in the form: a closed
         # registration that can still be posted to is not closed.
         if (!Support::config('auth.registration', true)) {
-            Alerts::danger('Registration is closed.');
+            Alerts::danger(_l('cdn.alerts.registration-closed'));
             return Response::json(['status' => 0]);
         }
 
@@ -91,7 +91,7 @@ class AuthController extends Controller
         Auth::login($user);
         Tenant::create($user);
 
-        Alerts::success('Welcome. Your CDN is ready.');
+        Alerts::success(_l('cdn.alerts.welcome'));
 
         return Response::json(['status' => 1, 'redirect' => $this->next()]);
     }
@@ -120,7 +120,7 @@ class AuthController extends Controller
     public function signout(): mixed
     {
         Auth::logout();
-        Alerts::success('Signed out.');
+        Alerts::success(_l('cdn.alerts.signed-out'));
 
         # A plain form post gets a redirect; only a caller that asked for json
         # gets json. Signing out through a script means a broken script - a cdn

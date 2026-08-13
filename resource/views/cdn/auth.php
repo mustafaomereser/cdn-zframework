@@ -1,23 +1,23 @@
 @extends('cdn.public')
-@section('title', 'Sign in')
+@section('title')<?= _l('cdn.auth.signin') ?>@endsection
 
 @section('body')
 <div class="container py-5" style="max-width: 440px">
 
     <div class="text-center mb-4">
-        <h4 class="mb-1">Welcome</h4>
-        <div class="hint">Your files, your URLs, your rules.</div>
+        <h4 class="mb-1">{{ _l('cdn.auth.welcome') }}</h4>
+        <div class="hint">{{ _l('cdn.auth.lede') }}</div>
     </div>
 
     <div class="auth-card">
 
     <ul class="nav nav-pills nav-fill mb-4" id="auth-tabs">
         <li class="nav-item">
-            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pane-signin">Sign in</button>
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pane-signin">{{ _l('cdn.auth.signin') }}</button>
         </li>
         @if($registration)
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-signup" id="tab-signup">Create account</button>
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pane-signup" id="tab-signup">{{ _l('cdn.auth.signup') }}</button>
         </li>
         @endif
     </ul>
@@ -31,21 +31,21 @@
                 <input type="hidden" name="next" value="{{ $next }}">
 
                 <div class="mb-3">
-                    <label class="form-label">E-mail</label>
+                    <label class="form-label">{{ _l('cdn.auth.email') }}</label>
                     <input name="email" type="email" class="form-control" required autofocus>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Password</label>
+                    <label class="form-label">{{ _l('cdn.auth.password') }}</label>
                     <input name="password" type="password" class="form-control" required>
                 </div>
 
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" name="keep-logged-in" value="1" id="keep">
-                    <label class="form-check-label small" for="keep">Keep me signed in</label>
+                    <label class="form-check-label small" for="keep">{{ _l('cdn.auth.keep') }}</label>
                 </div>
 
-                <button class="btn btn-primary w-100">Sign in</button>
+                <button class="btn btn-primary w-100">{{ _l('cdn.auth.signin') }}</button>
             </form>
         </div>
 
@@ -56,39 +56,37 @@
                 <input type="hidden" name="next" value="{{ $next }}">
 
                 <div class="mb-3">
-                    <label class="form-label">Username</label>
+                    <label class="form-label">{{ _l('cdn.auth.username') }}</label>
                     <input name="username" class="form-control" required>
-                    <div class="form-text">Used to name your project. You can change the display name later.</div>
+                    <div class="form-text">{{ _l('cdn.auth.username-help') }}</div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">E-mail</label>
+                    <label class="form-label">{{ _l('cdn.auth.email') }}</label>
                     <input name="email" type="email" class="form-control" required>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Password</label>
+                    <label class="form-label">{{ _l('cdn.auth.password') }}</label>
                     <input name="password" type="password" class="form-control" minlength="8" required>
-                    <div class="form-text">At least 8 characters.</div>
+                    <div class="form-text">{{ _l('cdn.auth.password-help') }}</div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Password again</label>
+                    <label class="form-label">{{ _l('cdn.auth.password2') }}</label>
                     <input name="re-password" type="password" class="form-control" minlength="8" required>
                 </div>
 
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" name="terms" value="1" id="terms" required>
                     <label class="form-check-label small" for="terms">
-                        I accept that what I upload is my responsibility.
+                        {{ _l('cdn.auth.terms') }}
                     </label>
                 </div>
 
-                <button class="btn btn-primary w-100">Create account</button>
+                <button class="btn btn-primary w-100">{{ _l('cdn.auth.signup') }}</button>
 
-                <p class="hint mt-3 mb-0">
-                    You get a project, a first bucket and a URL to serve from, straight away.
-                </p>
+                <p class="hint mt-3 mb-0">{{ _l('cdn.auth.signup-note') }}</p>
             </form>
         </div>
         @endif
@@ -127,10 +125,10 @@
                 // Validation failures come back as alerts on the payload.
                 const messages = Object.values(payload.alerts || {}).map(alert => alert[1]).filter(Boolean);
 
-                error.textContent = messages.length ? messages.join(' ') : 'Could not complete that.';
+                error.textContent = messages.length ? messages.join(' ') : <?= json_encode(_l('cdn.auth.failed')) ?>;
                 error.classList.remove('d-none');
             } catch (thrown) {
-                error.textContent = 'Network error - please try again.';
+                error.textContent = <?= json_encode(_l('cdn.auth.network')) ?>;
                 error.classList.remove('d-none');
             }
 

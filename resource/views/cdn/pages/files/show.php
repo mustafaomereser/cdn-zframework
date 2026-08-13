@@ -1,6 +1,6 @@
 @extends('cdn.main')
-@section('title', 'File')
-@section('lede', 'The URL below is the file. Change the query string and you change what is served.')
+@section('title')<?= _l('cdn.files.show.title') ?>@endsection
+@section('lede')<?= _l('cdn.files.show.lede') ?>@endsection
 
 @section('body')
 <?php $isImage = Support::isTransformable($file['mime']); ?>
@@ -10,17 +10,17 @@
         <div class="card mb-3">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h6 class="mb-0 truncate">{{ $file['name'] }}</h6>
+                    <h6 class="mb-0 truncate notranslate" translate="no">{{ $file['name'] }}</h6>
                     <form action="{{ route('cdn-admin.files.delete', ['id' => $file['id']]) }}" method="POST"
-                          data-confirm="Delete this file? Any page using its URL will break.">
+                          data-confirm="{{ _l('cdn.files.show.confirm-delete') }}">
                         <?= csrf() ?>
-                        <button class="btn btn-sm btn-outline-danger">Delete</button>
+                        <button class="btn btn-sm btn-outline-danger">{{ _l('cdn.common.delete') }}</button>
                     </form>
                 </div>
 
                 <div class="input-group input-group-sm mb-3">
                     <input class="form-control mono" value="{{ $url }}" readonly id="base-url">
-                    <button class="btn btn-outline-secondary" data-copy="{{ $url }}"><i class="bi bi-clipboard"></i> Copy</button>
+                    <button class="btn btn-outline-secondary" data-copy="{{ $url }}"><i class="bi bi-clipboard"></i> {{ _l('cdn.common.copy') }}</button>
                     <a class="btn btn-outline-secondary" href="{{ $url }}" target="_blank"><i class="bi bi-box-arrow-up-right"></i></a>
                 </div>
 
@@ -62,7 +62,7 @@
         @if($isImage && $bucket['transform'])
         <div class="card mb-3">
             <div class="card-body">
-                <h6 class="mb-1">Ask for another size</h6>
+                <h6 class="mb-1">{{ _l('cdn.files.show.ask') }}</h6>
                 <p class="hint">Built the first time somebody asks, then cached. Nothing is stored twice by you.</p>
 
                 <div class="row g-2 mb-2">
@@ -120,7 +120,7 @@
 
         <div class="card">
             <div class="card-body">
-                <h6 class="mb-1">Generated versions</h6>
+                <h6 class="mb-1">{{ _l('cdn.files.show.generated') }}</h6>
                 <p class="hint">Sizes somebody has already asked for. Safe to clear — they rebuild on demand.</p>
 
                 @forelse($variants as $variant)

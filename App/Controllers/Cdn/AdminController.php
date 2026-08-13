@@ -151,7 +151,7 @@ class AdminController
                 'uploaded_by' => 'panel:' . Auth::id(),
             ]);
         } else {
-            Alerts::danger('Choose a file, or give a URL to fetch.');
+            Alerts::danger(_l('cdn.alerts.upload-empty'));
             return back();
         }
 
@@ -159,7 +159,7 @@ class AdminController
 
         $done = array_values(array_filter($results, fn($result) => $result['ok']));
 
-        if (count($done)) Alerts::success(count($done) . ' file(s) uploaded.');
+        if (count($done)) Alerts::success(_l('cdn.alerts.uploaded', ['count' => count($done)]));
         foreach ($results as $result) if (!$result['ok']) Alerts::danger($this->reason($result));
 
         # Straight to the file when it is the only one: the next thing wanted is
@@ -178,7 +178,7 @@ class AdminController
         $file = Tenant::file($id);
         Uploader::delete($file);
 
-        Alerts::success('Deleted ' . $file['path'] . '.');
+        Alerts::success(_l('cdn.alerts.file-deleted', ['path' => $file['path']]));
 
         return redirect(route('cdn-admin.files'));
     }
@@ -237,7 +237,7 @@ class AdminController
         $clash = $model->where('project_id', $project['id'])->where('slug', $slug)->closureMode(false)->first();
 
         if ($clash && (!$existing || (int) $clash['id'] !== (int) $existing['id'])) {
-            Alerts::danger("`$slug` is already used in {$project['name']} — pick another name.");
+            Alerts::danger(_l('cdn.alerts.bucket-taken', ['slug' => $slug, 'project' => $project['name']]));
             return back();
         }
 
@@ -270,7 +270,7 @@ class AdminController
             Registry::forgetBucket($existing);
             Registry::forgetBucket(['project_id' => $project['id'], 'slug' => $slug]);
 
-            Alerts::success('Bucket saved.');
+            Alerts::success(_l('cdn.alerts.bucket-saved'));
         } else {
             $model->insert($columns + [
                 'project_id'  => $project['id'],
@@ -279,7 +279,7 @@ class AdminController
                 'signing_key' => Support::token(24),
             ]);
 
-            Alerts::success('Bucket created at /' . $project['slug'] . '/' . $slug . '.');
+            Alerts::success(_l('cdn.alerts.bucket-created', ['path' => '/' . $project['slug'] . '/' . $slug]));
         }
 
         return redirect(route('cdn-admin.buckets'));
@@ -303,7 +303,7 @@ class AdminController
         (new Buckets)->where('id', $bucket['id'])->delete();
         Registry::forgetBucket($bucket);
 
-        Alerts::success('Bucket deleted, with ' . count($files) . ' file(s).');
+        Alerts::success(_l('cdn.alerts.bucket-deleted', ['count' => count($files)]));
 
         return redirect(route('cdn-admin.buckets'));
     }
@@ -316,7 +316,7 @@ class AdminController
     {
         $result = Purger::bucket(Tenant::bucket($id), 'panel:' . Auth::id());
 
-        Alerts::success("Cleared {$result['variants']} generated image(s), freed " . \zFramework\Core\Helpers\File::humanFileSize($result['bytes']) . '.');
+        Alerts::success(_l('cdn.alerts.purged', ['count' => $result['variants'], 'size' => \zFramework\Core\Helpers\File::humanFileSize($result['bytes'])]));
 
         return back();
     }
@@ -390,7 +390,7 @@ class AdminController
         if (!$key) abort(404);
 
         (new ApiKeys)->where('id', $key['id'])->update(['status' => 'revoked']);
-        Alerts::success('Key revoked. Anything using it stops working now.');
+        Alerts::success(_l('cdn.alerts.key-revoked'));
 
         return back();
     }
@@ -478,13 +478,13 @@ class AdminController
         # two of them in a dropdown never sees the same label twice. Said out
         # loud rather than silently suffixed - the name is theirs to pick.
         if ((new Projects)->where('name', $name)->closureMode(false)->first()) {
-            Alerts::danger("`$name` is already taken — try another name.");
+            Alerts::danger(_l('cdn.alerts.name-taken', ['name' => $name]));
             return back();
         }
 
         $project = Tenant::create(Auth::user() ?: [], $name);
 
-        Alerts::success("Project created. Its files are served from /{$project['slug']}/.");
+        Alerts::success(_l('cdn.alerts.project-created', ['path' => '/' . $project['slug'] . '/']));
 
         return redirect(route('cdn-admin.settings'));
     }
@@ -507,14 +507,14 @@ class AdminController
 
         $clash = (new Projects)->where('name', $name)->closureMode(false)->first();
         if ($clash && (int) $clash['id'] !== (int) $project['id']) {
-            Alerts::danger("`$name` is already taken — try another name.");
+            Alerts::danger(_l('cdn.alerts.name-taken', ['name' => $name]));
             return back();
         }
 
         (new Projects)->where('id', $project['id'])->update(['name' => $name]);
         Registry::forgetProject((int) $project['id']);
 
-        Alerts::success('Saved.');
+        Alerts::success(_l('cdn.alerts.saved'));
 
         return back();
     }
@@ -546,6 +546,9 @@ class AdminController
      */
     private function reason(array $result): string
     {
+        return _l('cdn.upload-errors.' . ($result['error'] ?? 'unknown'))
+            ?? _l('cdn.upload-errors.unknown', ['error' => $result['error'] ?? 'unknown']);
+
         $message = match ($result['error'] ?? '') {
             'extension-blocked'       => 'That file type cannot be uploaded - it is one that can execute on a server.',
             'extension-not-allowed'   => 'This bucket does not accept that file type.',

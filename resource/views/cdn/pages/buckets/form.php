@@ -1,6 +1,6 @@
 @extends('cdn.main')
-@section('title', 'Bucket')
-@section('lede', 'A bucket is a folder with rules. The defaults are sensible — the rest is there when you need it.')
+@section('title')<?= _l('cdn.buckets.form.title') ?>@endsection
+@section('lede')<?= _l('cdn.buckets.form.lede') ?>@endsection
 
 @section('body')
 <?php $referers = Support::json($bucket['referers'] ?? null); ?>
@@ -21,13 +21,13 @@
 
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Name</label>
-                    <input name="name" class="form-control" value="{{ $bucket['name'] ?? '' }}" placeholder="Website images" required>
-                    <div class="form-text">Only you see this.</div>
+                    <label class="form-label">{{ _l('cdn.buckets.form.name') }}</label>
+                    <input name="name" class="form-control" value="{{ $bucket['name'] ?? '' }}" placeholder="{{ _l('cdn.buckets.form.name-holder') }}" required>
+                    <div class="form-text">{{ _l('cdn.buckets.form.name-help') }}</div>
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Project</label>
+                    <label class="form-label">{{ _l('cdn.common.project') }}</label>
 
                     <?php if (isset($bucket['id']) || count($projects) < 2) : ?>
                         <input class="form-control" value="<?= e($current['name'], false) ?>" disabled>
@@ -48,10 +48,10 @@
                 </div>
 
                 <div class="col-12">
-                    <label class="form-label">URL name</label>
+                    <label class="form-label">{{ _l('cdn.buckets.form.url') }}</label>
                     <div class="input-group">
-                        <span class="input-group-text mono" id="url-prefix">/cdn/<?= $current['slug'] ?>/</span>
-                        <input name="slug" class="form-control mono" value="{{ $bucket['slug'] ?? '' }}" placeholder="images" required>
+                        <span class="input-group-text mono notranslate" translate="no" id="url-prefix">/cdn/<?= $current['slug'] ?>/</span>
+                        <input name="slug" class="form-control mono" value="{{ $bucket['slug'] ?? '' }}" placeholder="{{ _l('cdn.buckets.form.url-holder') }}" required>
                     </div>
                     <div class="form-text">
                         @if(isset($bucket['id']))
@@ -65,14 +65,14 @@
 
             <hr>
 
-            <label class="form-label">Who can open these URLs?</label>
+            <label class="form-label">{{ _l('cdn.buckets.form.who') }}</label>
 
             <div class="form-check">
                 <input class="form-check-input" type="radio" name="visibility" value="public" id="v-public"
                        {{ ($bucket['visibility'] ?? 'public') == 'public' ? 'checked' : '' }}>
                 <label class="form-check-label" for="v-public">
-                    <strong>Anyone with the link</strong>
-                    <div class="hint">Normal for site images, styles and downloads.</div>
+                    <strong>{{ _l('cdn.buckets.form.public') }}</strong>
+                    <div class="hint">{{ _l('cdn.buckets.form.public-help') }}</div>
                 </label>
             </div>
 
@@ -80,8 +80,8 @@
                 <input class="form-check-input" type="radio" name="visibility" value="signed" id="v-signed"
                        {{ ($bucket['visibility'] ?? '') == 'signed' ? 'checked' : '' }}>
                 <label class="form-check-label" for="v-signed">
-                    <strong>Only signed links, which expire</strong>
-                    <div class="hint">For invoices, private documents, paid downloads.</div>
+                    <strong>{{ _l('cdn.buckets.form.signed') }}</strong>
+                    <div class="hint">{{ _l('cdn.buckets.form.signed-help') }}</div>
                 </label>
             </div>
 
@@ -89,8 +89,8 @@
                 <input class="form-check-input" type="radio" name="visibility" value="private" id="v-private"
                        {{ ($bucket['visibility'] ?? '') == 'private' ? 'checked' : '' }}>
                 <label class="form-check-label" for="v-private">
-                    <strong>Nobody — API access only</strong>
-                    <div class="hint">Storage with no public door at all.</div>
+                    <strong>{{ _l('cdn.buckets.form.private') }}</strong>
+                    <div class="hint">{{ _l('cdn.buckets.form.private-help') }}</div>
                 </label>
             </div>
 
@@ -100,7 +100,7 @@
                 <input class="form-check-input" type="checkbox" name="transform" value="1" id="transform"
                        {{ !isset($bucket['transform']) || $bucket['transform'] ? 'checked' : '' }}>
                 <label class="form-check-label" for="transform">
-                    <strong>Allow resizing images from the URL</strong>
+                    <strong>{{ _l('cdn.buckets.form.transform') }}</strong>
                     <div class="hint">Lets <code>?w=400</code> and friends work. Turn off for buckets that hold no images.</div>
                 </label>
             </div>
@@ -111,13 +111,13 @@
         <div class="accordion-item">
             <h2 class="accordion-header">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#advanced-body">
-                    Advanced
+                    {{ _l('cdn.common.advanced') }}
                 </button>
             </h2>
             <div id="advanced-body" class="accordion-collapse collapse" data-bs-parent="#advanced">
                 <div class="accordion-body">
 
-                    <h6>Caching</h6>
+                    <h6>{{ _l('cdn.buckets.form.caching') }}</h6>
                     <div class="row g-3 mb-2">
                         <div class="col-md-6">
                             <label class="form-label">Browsers may keep a copy for</label>
@@ -142,7 +142,7 @@
                         when the content changes, make it a year.
                     </div>
 
-                    <h6 class="mt-4">Hotlink protection</h6>
+                    <h6 class="mt-4">{{ _l('cdn.buckets.form.hotlink') }}</h6>
                     <p class="hint">Stops other sites embedding your files and spending your bandwidth.</p>
 
                     <select name="referer_mode" class="form-select mb-2">
@@ -163,7 +163,7 @@
                         </label>
                     </div>
 
-                    <h6 class="mt-4">Restrictions</h6>
+                    <h6 class="mt-4">{{ _l('cdn.buckets.form.limits') }}</h6>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Largest file (bytes, 0 = default)</label>
@@ -195,7 +195,7 @@
                         </label>
                     </div>
 
-                    <h6 class="mt-4">Mirror another server</h6>
+                    <h6 class="mt-4">{{ _l('cdn.buckets.form.origin') }}</h6>
                     <p class="hint">
                         With an address here, a file nobody uploaded is fetched from there the first time it is asked
                         for, then served from here. Leave empty for a normal bucket.
@@ -218,8 +218,8 @@
     </div>
 
     <div class="d-flex gap-2">
-        <button class="btn btn-primary">Save</button>
-        <a href="{{ route('cdn-admin.buckets') }}" class="btn btn-outline-secondary">Cancel</a>
+        <button class="btn btn-primary">{{ _l('cdn.common.save') }}</button>
+        <a href="{{ route('cdn-admin.buckets') }}" class="btn btn-outline-secondary">{{ _l('cdn.common.cancel') }}</a>
     </div>
 </form>
 @endsection

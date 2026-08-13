@@ -849,6 +849,48 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 
 .docs-body .note b { color: var(--ink); }
 
+/* Language menu: the two hand-translated locales, then the machine-translated
+   long tail under a divider - so nobody mistakes one for the other. */
+.lang-menu .lang-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    color: var(--ink-2);
+    font-size: .8125rem;
+    font-weight: 500;
+    padding: .35rem .6rem;
+}
+
+.lang-menu .lang-toggle:hover { background: var(--surface-2); color: var(--ink); }
+.lang-menu .lang-toggle i { font-size: .95rem; color: var(--ink-3); }
+
+.lang-list {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lift);
+    padding: 5px;
+    min-width: 190px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.lang-list .dropdown-item {
+    display: flex;
+    align-items: center;
+    font-size: .875rem;
+    border-radius: var(--radius-sm);
+    padding: .38rem .6rem;
+    color: var(--ink-2);
+}
+
+.lang-list .dropdown-item:hover { background: var(--surface-2); color: var(--ink); }
+.lang-list .dropdown-item.active { background: var(--accent-wash); color: var(--accent-ink); font-weight: 500; }
+.lang-list .dropdown-divider { margin: 5px 0; border-color: var(--line); }
+.lang-list .lang-note { font-size: .6875rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); padding: 4px 10px 6px; }
+
 .lang-switch { display: inline-flex; background: var(--surface-3); border-radius: var(--radius-sm); padding: 2px; }
 
 .lang-switch a {

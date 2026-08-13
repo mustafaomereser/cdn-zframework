@@ -354,6 +354,44 @@ return [
     ],
 
     /**
+     * Languages.
+     *
+     * The interface is translated properly into the languages under
+     * resource/lang - English and Turkish - and those are what the switcher
+     * offers.
+     *
+     * translate-widget adds Google's translate widget on top, for the long tail
+     * nobody has translated by hand. It rewrites the page in the browser and
+     * cannot tell prose from a curl command, so everything that must survive
+     * intact - code blocks, urls, bucket names, api keys - is marked
+     * `translate="no"` and left alone.
+     *
+     * It is off in the panel by default. A working tool is used in a language
+     * its operator reads, and a third-party script rewriting a page that has an
+     * API key on it is a poor trade for a language nobody asked for.
+     */
+    'i18n' => [
+        'translate-widget' => [
+            'public' => true,
+            'panel'  => false,
+        ],
+
+        # Offered by the widget, on top of the two real translations.
+        'widget-languages' => [
+            'de' => ['Deutsch', 'de'],   'fr' => ['Français', 'fr'],
+            'es' => ['Español', 'es'],   'it' => ['Italiano', 'it'],
+            'pt' => ['Português', 'pt'], 'nl' => ['Nederlands', 'nl'],
+            'pl' => ['Polski', 'pl'],    'ru' => ['Русский', 'ru'],
+            'uk' => ['Українська', 'ua'], 'el' => ['Ελληνικά', 'gr'],
+            'ar' => ['العربية', 'sa'],   'fa' => ['فارسی', 'ir'],
+            'az' => ['Azərbaycan', 'az'], 'kk' => ['Қазақша', 'kz'],
+            'uz' => ['Oʻzbekcha', 'uz'], 'hi' => ['हिन्दी', 'in'],
+            'zh-CN' => ['简体中文', 'cn'], 'ja' => ['日本語', 'jp'],
+            'ko' => ['한국어', 'kr'],
+        ],
+    ],
+
+    /**
      * The panel.
      */
     'admin' => [

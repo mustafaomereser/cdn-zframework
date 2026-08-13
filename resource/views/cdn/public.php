@@ -18,13 +18,15 @@
         <div class="container d-flex align-items-center justify-content-between">
             <a class="brand" href="/"><i class="bi bi-hdd-network"></i> {{ config('app.title') }}</a>
 
-            <div class="d-flex align-items-center gap-3">
-                <a href="{{ route('docs') }}" class="hint">Docs</a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ route('docs') }}" class="hint me-1">{{ _l('cdn.menu.docs') }}</a>
+
+                <?php include(BASE_PATH . '/resource/views/cdn/partials/translate.php') ?>
 
                 @if(zFramework\Core\Facades\Auth::check())
-                <a href="{{ route('cdn-admin.dashboard') }}" class="btn btn-primary btn-sm">Open panel</a>
+                <a href="{{ route('cdn-admin.dashboard') }}" class="btn btn-primary btn-sm">{{ _l('cdn.menu.panel') }}</a>
                 @else
-                <a href="{{ route('auth-form') }}" class="btn btn-outline-secondary btn-sm">Sign in</a>
+                <a href="{{ route('auth-form') }}" class="btn btn-outline-secondary btn-sm">{{ _l('cdn.auth.signin') }}</a>
                 @endif
             </div>
         </div>

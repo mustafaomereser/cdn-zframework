@@ -14,12 +14,12 @@ use App\Cdn\Tenant;
 use zFramework\Core\Helpers\File;
 
 $menu = [
-    'cdn-admin.dashboard' => ['icon' => 'bi-grid-1x2',    'title' => 'Overview'],
-    'cdn-admin.files'     => ['icon' => 'bi-file-earmark', 'title' => 'Files'],
-    'cdn-admin.buckets'   => ['icon' => 'bi-folder2',     'title' => 'Buckets'],
-    'cdn-admin.keys'      => ['icon' => 'bi-key',         'title' => 'API keys'],
-    'cdn-admin.activity'  => ['icon' => 'bi-activity',    'title' => 'Activity'],
-    'cdn-admin.settings'  => ['icon' => 'bi-sliders',     'title' => 'Settings'],
+    'cdn-admin.dashboard' => ['bi-grid-1x2',     'overview'],
+    'cdn-admin.files'     => ['bi-file-earmark', 'files'],
+    'cdn-admin.buckets'   => ['bi-folder2',      'buckets'],
+    'cdn-admin.keys'      => ['bi-key',          'keys'],
+    'cdn-admin.activity'  => ['bi-activity',     'activity'],
+    'cdn-admin.settings'  => ['bi-sliders',      'settings'],
 ];
 
 $current  = uri();
@@ -51,14 +51,16 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
 <body>
     <div class="d-flex">
         <nav class="sidebar">
-            <div class="brand"><i class="bi bi-hdd-network"></i> {{ config('app.title') }}</div>
-            <div class="project truncate">
+            <div class="brand"><i class="bi bi-hdd-network"></i> <span class="notranslate" translate="no">{{ config('app.title') }}</span></div>
+
+            <?php # A project name is the user's own text, and a slug is in a url. ?>
+            <div class="project truncate notranslate" translate="no">
                 <?= count($projects) > 1
-                    ? count($projects) . ' projects'
+                    ? count($projects) . ' ' . _l('cdn.common.projects')
                     : e($projects[0]['name'], false) ?>
             </div>
 
-            <?php foreach ($menu as $route => $item) :
+            <?php foreach ($menu as $route => [$icon, $key]) :
                 $path = parse_url(route($route), PHP_URL_PATH);
                 # Exact match for Overview, prefix match for the rest - otherwise
                 # the panel root is highlighted on every page.
@@ -67,7 +69,7 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
                     : str_starts_with($current, $path);
             ?>
                 <a href="{{ route($route) }}" class="<?= $active ? 'active' : '' ?>">
-                    <i class="bi {{ $item['icon'] }}"></i> {{ $item['title'] }}
+                    <i class="bi <?= $icon ?>"></i> <?= _l("cdn.menu.$key") ?>
                 </a>
             <?php endforeach ?>
 
@@ -75,26 +77,29 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
 
             <div class="usage">
                 <div class="row-line">
-                    <span>Storage</span>
-                    <b>{{ File::humanFileSize($used) }}</b>
+                    <span><?= _l('cdn.common.storage') ?></span>
+                    <b class="notranslate" translate="no">{{ File::humanFileSize($used) }}</b>
                 </div>
                 <?php if ($quota > 0) : ?>
                     <div class="quota <?= $share >= 95 ? 'full' : ($share >= 80 ? 'warn' : '') ?>">
                         <div style="width: <?= $share ?>%"></div>
                     </div>
-                    <div class="row-line mt-1"><span>of {{ File::humanFileSize($quota) }}</span><b><?= $share ?>%</b></div>
+                    <div class="row-line mt-1">
+                        <span><?= _l('cdn.common.of') ?> <span class="notranslate" translate="no">{{ File::humanFileSize($quota) }}</span></span>
+                        <b><?= $share ?>%</b>
+                    </div>
                 <?php endif ?>
             </div>
 
-            <a href="{{ route('docs') }}" target="_blank"><i class="bi bi-book"></i> Documentation</a>
-            <a href="/" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Public site</a>
+            <a href="{{ route('docs') }}" target="_blank"><i class="bi bi-book"></i> <?= _l('cdn.menu.docs') ?></a>
+            <a href="/" target="_blank"><i class="bi bi-box-arrow-up-right"></i> <?= _l('cdn.menu.public') ?></a>
 
             <?php /* A form, not a script: a sign-out that depends on javascript
                      is a session somebody cannot end when the javascript fails
                      to load. */ ?>
             <form action="{{ route('sign-out') }}" method="POST" class="m-0">
                 <?= csrf() ?>
-                <button type="submit" class="link-button"><i class="bi bi-box-arrow-right"></i> Sign out</button>
+                <button type="submit" class="link-button"><i class="bi bi-box-arrow-right"></i> <?= _l('cdn.menu.signout') ?></button>
             </form>
         </nav>
 
@@ -104,7 +109,10 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
                     <h4>@yield('title')</h4>
                     <div class="hint">@yield('lede')</div>
                 </div>
-                <div class="text-nowrap">@yield('actions')</div>
+                <div class="d-flex align-items-center gap-2 text-nowrap">
+                    @yield('actions')
+                    <?php include(BASE_PATH . '/resource/views/cdn/partials/translate.php') ?>
+                </div>
             </div>
 
             @yield('body')
@@ -129,7 +137,7 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
             navigator.clipboard.writeText($(this).data('copy'));
 
             const button = $(this), original = button.html();
-            button.html('<i class="bi bi-check2"></i> Copied');
+            button.html('<i class="bi bi-check2"></i> <?= _l('cdn.common.copied') ?>');
             setTimeout(() => button.html(original), 1500);
         });
 
