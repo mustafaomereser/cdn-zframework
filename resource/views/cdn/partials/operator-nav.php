@@ -17,6 +17,7 @@ use App\Cdn\Runner;
 $navTabs = [
     'cdn-admin.operator.users'    => ['bi-people',   'users'],
     'cdn-admin.operator.projects' => ['bi-boxes',    'projects'],
+    'cdn-admin.operator.files'    => ['bi-file-earmark', 'files'],
     'cdn-admin.operator.system'   => ['bi-cpu',      'system'],
     'cdn-admin.operator.audits'   => ['bi-list-ul',  'audits'],
 ];
@@ -29,7 +30,11 @@ $navPath = uri();
 <ul class="nav nav-pills op-tabs mb-3">
     <?php foreach ($navTabs as $navRoute => [$navIcon, $navKey]) :
         $navTarget = parse_url(route($navRoute), PHP_URL_PATH);
-        $navActive = rtrim($navPath, '/') === rtrim($navTarget, '/');
+        # A detail page is under its list - /admin/users/3 keeps Accounts lit -
+        # except the root, which is a prefix of everything.
+        $navActive = rtrim($navTarget, '/') === rtrim(parse_url(route('cdn-admin.operator.users'), PHP_URL_PATH), '/')
+            ? rtrim($navPath, '/') === rtrim($navTarget, '/') || str_starts_with($navPath, rtrim($navTarget, '/') . '/users')
+            : str_starts_with($navPath, rtrim($navTarget, '/'));
     ?>
         <li class="nav-item">
             <a class="nav-link <?= $navActive ? 'active' : '' ?>" href="<?= route($navRoute) ?>">

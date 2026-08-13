@@ -9,6 +9,16 @@
     <div class="col-lg-7">
         <div class="card mb-3">
             <div class="card-body">
+                <?php # Where it lives, with a way into each level. The page
+                      # used to name the file and nothing else. ?>
+                <nav class="crumbs mb-2 notranslate" translate="no">
+                    <a href="{{ route('cdn-admin.projects.show', ['id' => $project['id']]) }}">{{ $project['name'] }}</a>
+                    <i class="bi bi-chevron-right"></i>
+                    <a href="{{ route('cdn-admin.files') }}?bucket={{ $bucket['id'] }}">{{ $bucket['name'] }}</a>
+                    <i class="bi bi-chevron-right"></i>
+                    <span class="mono">{{ $file['path'] }}</span>
+                </nav>
+
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <h6 class="mb-0 truncate notranslate" translate="no">{{ $file['name'] }}</h6>
                     <form action="{{ route('cdn-admin.files.delete', ['id' => $file['id']]) }}" method="POST"

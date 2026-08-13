@@ -84,7 +84,9 @@ $split = function (int $bytes) use ($units): array {
                         <tr>
                             <td>
                                 <div class="notranslate" translate="no">
-                                    <b><?= e($user['username'], false) ?></b>
+                                    <a class="fw-bold" href="{{ route('cdn-admin.operator.users.show', ['id' => $user['id']]) }}">
+                                        <?= e($user['username'], false) ?>
+                                    </a>
                                     <?php if ($user['operator']) : ?><span class="badge text-bg-primary ms-1">operator</span><?php endif ?>
                                     <?php if ($suspended) : ?><span class="badge text-bg-danger ms-1"><?= _l('cdn.operator.suspended') ?></span><?php endif ?>
                                 </div>
@@ -96,7 +98,11 @@ $split = function (int $bytes) use ($units): array {
 
                             <td class="small notranslate" translate="no">
                                 <?php foreach ($user['projects'] as $project) : ?>
-                                    <div class="truncate"><?= e($project['name'], false) ?></div>
+                                    <div class="truncate">
+                                        <a href="{{ route('cdn-admin.operator.projects.show', ['id' => $project['id']]) }}">
+                                            <?= e($project['name'], false) ?>
+                                        </a>
+                                    </div>
                                 <?php endforeach ?>
                                 <?php if (!count($user['projects'])) : ?><span class="hint">—</span><?php endif ?>
                             </td>

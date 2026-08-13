@@ -167,6 +167,122 @@ class Operator
     }
 
     /**
+     * Everything under one account.
+     *
+     * The operator pages could list accounts and projects and nothing else -
+     * which meant an operator could see that somebody was using 40 GB and had
+     * no way to find out what of. This is the page that answers that.
+     *
+     * @param int|string $id
+     * @return array
+     */
+    public static function account($id): array
+    {
+        $user     = self::user($id);
+        $projects = (new Projects)->where('owner_id', $user['id'])->closureMode(false)->orderBy(['id' => 'ASC'])->get();
+        $ids      = array_map(fn($project) => (int) $project['id'], $projects);
+
+        $buckets = count($ids)
+            ? (new Buckets)->whereIn('project_id', $ids)->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get()
+            : [];
+
+        $files = count($ids)
+            ? (new Files)->whereIn('project_id', $ids)->closureMode(false)->orderBy(['id' => 'DESC'])->limit(12)->get()
+            : [];
+
+        return [
+            'user'     => $user,
+            'projects' => self::withCounts($projects, $buckets),
+            'buckets'  => $buckets,
+            'files'    => $files,
+            'keys'     => count($ids) ? count((new ApiKeys)->whereIn('project_id', $ids)->closureMode(false)->get()) : 0,
+        ];
+    }
+
+    /**
+     * One project, whoever owns it, with what is inside it.
+     *
+     * @param int|string $id
+     * @return array
+     */
+    public static function projectDetail($id): array
+    {
+        $project = self::project($id);
+        $owner   = (new User)->closureMode(false)->where('id', (int) $project['owner_id'])->first();
+
+        $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get();
+        $files   = (new Files)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'DESC'])->limit(12)->get();
+
+        return [
+            'project' => $project,
+            'owner'   => $owner,
+            'buckets' => $buckets,
+            'files'   => $files,
+            'counts'  => [
+                'files' => array_sum(array_map(fn($bucket) => (int) $bucket['files_count'], $buckets)),
+                'keys'  => count((new ApiKeys)->where('project_id', $project['id'])->closureMode(false)->get()),
+            ],
+        ];
+    }
+
+    /**
+     * Every file in the installation, newest first.
+     *
+     * Searchable by path, and filterable to one bucket - which is how an
+     * operator answers "what is this account storing" without opening twelve
+     * pages.
+     *
+     * @param int $perPage
+     * @return array
+     */
+    public static function files(int $perPage = 40): array
+    {
+        $query = (new Files)->closureMode(false);
+
+        if ($search = request('q')) $query->where('path', 'LIKE', '%' . $search . '%');
+        if ($bucket = (int) request('bucket')) $query->where('bucket_id', $bucket);
+        if ($project = (int) request('project')) $query->where('project_id', $project);
+
+        $files = $query->orderBy(['id' => 'DESC'])->paginate($perPage);
+
+        $bucketIds  = array_values(array_unique(array_map(fn($file) => (int) $file['bucket_id'], $files['items'])));
+        $projectIds = array_values(array_unique(array_map(fn($file) => (int) $file['project_id'], $files['items'])));
+
+        $buckets = count($bucketIds) ? (new Buckets)->whereIn('id', $bucketIds)->closureMode(false)->get() : [];
+        $owners  = count($projectIds) ? (new Projects)->whereIn('id', $projectIds)->closureMode(false)->get() : [];
+
+        $byBucket = $byProject = [];
+        foreach ($buckets as $row) $byBucket[(int) $row['id']] = $row;
+        foreach ($owners as $row)  $byProject[(int) $row['id']] = $row;
+
+        foreach ($files['items'] as &$file) {
+            $file['bucket']  = $byBucket[(int) $file['bucket_id']] ?? null;
+            $file['project'] = $byProject[(int) $file['project_id']] ?? null;
+        }
+
+        return $files;
+    }
+
+    /**
+     * Attach bucket and file counts to a list of projects.
+     *
+     * @param array $projects
+     * @param array $buckets
+     * @return array
+     */
+    private static function withCounts(array $projects, array $buckets): array
+    {
+        foreach ($projects as &$project) {
+            $own = array_values(array_filter($buckets, fn($bucket) => (int) $bucket['project_id'] === (int) $project['id']));
+
+            $project['buckets'] = count($own);
+            $project['files']   = array_sum(array_map(fn($bucket) => (int) $bucket['files_count'], $own));
+        }
+
+        return $projects;
+    }
+
+    /**
      * Set an account's allowance. Bytes; 0 is unlimited.
      *
      * Written to the account and then down to its projects. The delivery path

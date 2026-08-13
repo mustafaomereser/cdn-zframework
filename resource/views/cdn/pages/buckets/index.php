@@ -15,6 +15,7 @@
             <thead class="table-light">
                 <tr>
                     <th>{{ _l('cdn.common.bucket') }}</th>
+                    <th>{{ _l('cdn.common.project') }}</th>
                     <th>{{ _l('cdn.buckets.form.who') }}</th>
                     <th>{{ _l('cdn.buckets.cache') }}</th>
                     <th class="text-end">{{ _l('cdn.common.files') }}</th>
@@ -26,14 +27,26 @@
             <tbody>
                 @forelse($buckets as $bucket)
                 <tr>
+                    <?php $bucketProject = Tenant::projectOf($bucket); ?>
                     <td>
-                        <div class="fw-medium">{{ $bucket['name'] }}</div>
-                        <div class="small text-secondary mono">
-                            {{ rtrim(config('cdn.delivery.url-prefix'), '/') }}/{{ Tenant::projectOf($bucket)['slug'] }}/{{ $bucket['slug'] }}/…
+                        <a class="fw-medium notranslate" translate="no" href="{{ route('cdn-admin.files') }}?bucket={{ $bucket['id'] }}">
+                            {{ $bucket['name'] }}
+                        </a>
+                        <div class="small text-secondary mono notranslate" translate="no">
+                            {{ rtrim(config('cdn.delivery.url-prefix'), '/') }}/{{ $bucketProject['slug'] }}/{{ $bucket['slug'] }}/…
                         </div>
                         @if($bucket['origin_url'])
                         <div class="small text-info mono">↳ {{ $bucket['origin_url'] }}</div>
                         @endif
+                    </td>
+
+                    <?php # Which project this belongs to, and a way into it. A
+                          # bucket list that does not say is a list of names
+                          # somebody has to already know the answer for. ?>
+                    <td class="small">
+                        <a class="notranslate" translate="no" href="{{ route('cdn-admin.projects.show', ['id' => $bucketProject['id']]) }}">
+                            {{ $bucketProject['name'] }}
+                        </a>
                     </td>
                     <td>
                         <span class="badge text-bg-{{ $bucket['visibility'] == 'public' ? 'success' : ($bucket['visibility'] == 'signed' ? 'warning' : 'secondary') }}">
@@ -67,7 +80,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center text-secondary py-4 small">
+                    <td colspan="8" class="text-center text-secondary py-4 small">
                         {{ _l('cdn.buckets.empty') }}
                     </td>
                 </tr>

@@ -33,6 +33,7 @@
             <thead class="table-light">
                 <tr>
                     <th>{{ _l('cdn.files.path') }}</th>
+                    <th>{{ _l('cdn.common.bucket') }}</th>
                     <th>{{ _l('cdn.files.type') }}</th>
                     <th class="text-end">{{ _l('cdn.files.size') }}</th>
                     <th class="text-end">{{ _l('cdn.common.requests') }}</th>
@@ -43,10 +44,28 @@
             <tbody>
                 @forelse($files['items'] as $file)
                 <tr>
+                    <?php
+                    # Where this file actually lives. A path with no bucket and
+                    # no project next to it is a path in some directory
+                    # somewhere, and the list was full of them.
+                    $fileBucket  = Tenant::bucket((int) $file['bucket_id']);
+                    $fileProject = Tenant::projectOf($fileBucket);
+                    ?>
                     <td>
                         <a href="{{ route('cdn-admin.files.show', ['id' => $file['id']]) }}" class="mono text-decoration-none truncate d-block notranslate" translate="no">
                             {{ $file['path'] }}
                         </a>
+                    </td>
+
+                    <td class="small">
+                        <a class="notranslate" translate="no" href="{{ route('cdn-admin.files') }}?bucket={{ $fileBucket['id'] }}">
+                            {{ $fileBucket['name'] }}
+                        </a>
+                        <div class="hint">
+                            <a class="notranslate" translate="no" href="{{ route('cdn-admin.projects.show', ['id' => $fileProject['id']]) }}">
+                                {{ $fileProject['name'] }}
+                            </a>
+                        </div>
                     </td>
                     <td class="small text-secondary">
                         {{ $file['mime'] }}
@@ -65,7 +84,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center text-secondary py-4 small">
+                    <td colspan="7" class="text-center text-secondary py-4 small">
                         {{ _l('cdn.files.empty') }} <a href="{{ route('cdn-admin.dashboard') }}">{{ _l('cdn.files.empty-action') }}</a>.
                     </td>
                 </tr>

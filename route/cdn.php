@@ -135,6 +135,9 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin') . '/admin', '/cd
 
         Route::get('/', [OperatorController::class, 'users'])->name('users');
         Route::get('/projects', [OperatorController::class, 'projects'])->name('projects');
+        Route::get('/files', [OperatorController::class, 'files'])->name('files');
+        Route::get('/users/{id}', [OperatorController::class, 'account'])->name('users.show');
+        Route::get('/projects/{id}', [OperatorController::class, 'project'])->name('projects.show');
         Route::get('/system', [OperatorController::class, 'system'])->name('system');
         Route::get('/log', [OperatorController::class, 'audits'])->name('audits');
 

@@ -82,7 +82,9 @@ $split = function (int $bytes) use ($units): array {
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div class="notranslate" translate="no">
                     <h6 class="mb-1">
-                        <?= e($project['name'], false) ?>
+                        <a href="{{ route('cdn-admin.operator.projects.show', ['id' => $project['id']]) }}">
+                            <?= e($project['name'], false) ?>
+                        </a>
                         <?php if ($suspended) : ?><span class="badge text-bg-danger ms-1"><?= _l('cdn.operator.suspended') ?></span><?php endif ?>
                     </h6>
                     <?php if ($suspended && ($project['suspend_reason'] ?? '')) : ?>
@@ -92,7 +94,9 @@ $split = function (int $bytes) use ($units): array {
                     <div class="hint mono">
                         <?= rtrim((string) config('cdn.delivery.url-prefix'), '/') ?>/<?= e($project['slug'], false) ?>/…
                         <?php if ($project['owner']) : ?>
-                            · <?= e($project['owner']['username'], false) ?>
+                            · <a href="{{ route('cdn-admin.operator.users.show', ['id' => $project['owner']['id']]) }}">
+                                <?= e($project['owner']['username'], false) ?>
+                            </a>
                         <?php endif ?>
                     </div>
                 </div>

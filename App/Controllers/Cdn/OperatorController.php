@@ -60,6 +60,48 @@ class OperatorController
     }
 
     /**
+     * One account, with everything under it.
+     *
+     * @param string $id
+     * @return mixed
+     */
+    public function account(string $id): mixed
+    {
+        return view('cdn.pages.admin.account', Operator::account($id) + [
+            'units'  => ['B' => 1, 'KB' => 1024, 'MB' => 1024 ** 2, 'GB' => 1024 ** 3, 'TB' => 1024 ** 4],
+            'locked' => count((array) Support::config('auth.operators', [])) > 0,
+            'prefix' => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
+        ]);
+    }
+
+    /**
+     * One project, whoever owns it.
+     *
+     * @param string $id
+     * @return mixed
+     */
+    public function project(string $id): mixed
+    {
+        return view('cdn.pages.admin.project', Operator::projectDetail($id) + [
+            'units'  => ['B' => 1, 'KB' => 1024, 'MB' => 1024 ** 2, 'GB' => 1024 ** 3, 'TB' => 1024 ** 4],
+            'prefix' => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
+        ]);
+    }
+
+    /**
+     * Every file in the installation.
+     *
+     * @return mixed
+     */
+    public function files(): mixed
+    {
+        return view('cdn.pages.admin.files', [
+            'files'  => Operator::files(),
+            'prefix' => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
+        ]);
+    }
+
+    /**
      * What was changed, and by whom.
      *
      * @return mixed

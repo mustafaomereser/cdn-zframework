@@ -222,6 +222,11 @@ $sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M')
         // rather than an inline onchange: select2 raises its change event on
         // the original element through jQuery, and an inline handler never
         // hears it - which would leave every filter in the panel doing nothing.
+        // A checkbox that reveals the fields it turns on.
+        $('[data-toggle-fields]').on('change', function () {
+            $($(this).data('toggle-fields')).toggleClass('d-none', !this.checked);
+        });
+
         $('select[data-autosubmit], input[data-autosubmit]').on('change', function () {
             this.form.submit();
         });

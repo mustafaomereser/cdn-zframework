@@ -971,6 +971,40 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 
 .minify-note i.bi-scissors { color: var(--accent-ink); margin-right: 4px; }
 
+/* Where something sits: project / bucket / path. */
+.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .875rem; color: var(--ink-3); }
+.crumbs a { color: var(--ink-2); font-weight: 500; }
+.crumbs a:hover { color: var(--accent-ink); }
+.crumbs i { font-size: .7rem; color: var(--ink-4); }
+
+/* The month of traffic. Was a sparkline in a side card, which is a chart
+   nobody can read a date off. */
+.chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 120px;
+    padding: 4px 0;
+}
+
+.chart .bar {
+    flex: 1 1 0;
+    min-width: 3px;
+    background: var(--accent-wash);
+    border-radius: 2px 2px 0 0;
+    transition: background .12s;
+}
+
+.chart .bar:hover { background: var(--accent); }
+
+.chart-axis {
+    display: flex;
+    justify-content: space-between;
+    font-size: .75rem;
+    color: var(--ink-3);
+    margin-top: 6px;
+}
+
 /* ---------------------------------------------------------------- operator */
 
 .op-tabs { gap: 4px; }
