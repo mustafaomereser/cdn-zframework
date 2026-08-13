@@ -12,7 +12,7 @@
 
 <form method="GET" class="row g-2 mb-3">
     <div class="col-md-3">
-        <select name="bucket" class="form-select form-select-sm" onchange="this.form.submit()">
+        <select name="bucket" class="form-select form-select-sm" data-autosubmit>
             <option value="">All buckets</option>
             @foreach($buckets as $bucket)
             <option value="{{ $bucket['id'] }}" {{ request('bucket') == $bucket['id'] ? 'selected' : '' }}>{{ $bucket['name'] }}</option>

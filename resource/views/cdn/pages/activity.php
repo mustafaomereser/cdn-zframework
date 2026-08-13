@@ -14,7 +14,7 @@
 
         <form method="GET" class="row g-2 mb-3">
             <div class="col-md-3">
-                <select name="bucket" class="form-select form-select-sm" onchange="this.form.submit()">
+                <select name="bucket" class="form-select form-select-sm" data-autosubmit>
                     <option value="">All buckets</option>
                     @foreach($buckets as $bucket)
                     <option value="{{ $bucket['id'] }}" {{ request('bucket') == $bucket['id'] ? 'selected' : '' }}>{{ $bucket['name'] }}</option>
@@ -22,7 +22,7 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <select name="cache" class="form-select form-select-sm" onchange="this.form.submit()">
+                <select name="cache" class="form-select form-select-sm" data-autosubmit>
                     <option value="">Anything</option>
                     <option value="hit"         {{ request('cache') == 'hit' ? 'selected' : '' }}>Served from cache</option>
                     <option value="miss"        {{ request('cache') == 'miss' ? 'selected' : '' }}>Read from disk</option>
@@ -34,7 +34,7 @@
             <div class="col-md-3 d-flex align-items-center">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" name="errors" value="1" id="errors"
-                           onchange="this.form.submit()" {{ request('errors') ? 'checked' : '' }}>
+                           data-autosubmit {{ request('errors') ? 'checked' : '' }}>
                     <label class="form-check-label small" for="errors">Problems only</label>
                 </div>
             </div>

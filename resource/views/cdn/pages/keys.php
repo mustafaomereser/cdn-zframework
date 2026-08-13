@@ -102,12 +102,16 @@
 
                     <div class="mb-3">
                         <label class="form-label">Buckets</label>
-                        <select name="buckets[]" class="form-select form-select-sm" multiple size="4">
+                        <?php # An empty select2 multi-select renders as a blank box; the
+                              # placeholder is what tells you the empty state means
+                              # "everything" rather than "broken". ?>
+                        <select name="buckets[]" class="form-select form-select-sm" multiple
+                                data-placeholder="Every bucket">
                             @foreach($buckets as $bucket)
                             <option value="{{ $bucket['id'] }}">{{ $bucket['name'] }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Select none for every bucket in the project.</div>
+                        <div class="form-text">Leave empty to allow every bucket in your project.</div>
                     </div>
 
                     <div class="mb-3">

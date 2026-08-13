@@ -2,6 +2,8 @@
 @section('title', 'Content delivery')
 
 @section('body')
+<?php $host = $_SERVER['HTTP_HOST'] ?? 'cdn.example.com'; ?>
+
 <section class="hero py-5">
     <div class="container py-4">
         <div class="row align-items-center g-5">
@@ -14,7 +16,7 @@
                 </p>
 
                 <div class="url-demo mb-4">
-                    https://{{ $_SERVER['HTTP_HOST'] ?? 'cdn.example.com' }}/cdn/<b>photos</b>/hero.jpg<span class="q">?w=1200&amp;fit=cover&amp;format=webp</span>
+                    https://<?= $host ?>/cdn/<b>photos</b>/hero.jpg<span class="q">?w=1200&amp;fit=cover&amp;format=webp</span>
                 </div>
 
                 <div class="d-flex gap-2 flex-wrap">
@@ -38,16 +40,19 @@
                     <div class="card-body">
                         <div class="label mb-3">One file, three URLs</div>
 
-                        <?php foreach ([['?w=80', '80px', 34], ['?w=400&amp;fit=cover', '400px, cropped', 62], ['', 'original', 100]] as [$query, $caption, $width]) : ?>
-                            <div class="d-flex align-items-center gap-3 mb-2">
-                                <div style="width: <?= $width ?>%; height: 26px; border-radius: 5px;
-                                            background: linear-gradient(90deg, var(--surface-3), var(--line));"></div>
-                                <span class="hint text-nowrap"><?= $caption ?></span>
+                        <?php foreach ([
+                            ['80px thumbnail', '?w=80',              22],
+                            ['400px, cropped square', '?w=400&amp;fit=cover', 55],
+                            ['the original', '',                     100],
+                        ] as [$caption, $query, $width]) : ?>
+                            <div class="size-demo">
+                                <div class="bar" style="width: <?= $width ?>%"></div>
+                                <span class="caption"><?= $caption ?></span>
                             </div>
-                            <div class="mono hint mb-3" style="font-size: .75rem">…/hero.jpg<?= $query ?></div>
+                            <div class="mono">…/hero.jpg<?= $query ?></div>
                         <?php endforeach ?>
 
-                        <hr class="my-3" style="border-color: var(--line)">
+                        <hr style="border-color: var(--line)">
 
                         <p class="hint mb-0">
                             No build step, no resizing script, no second copy to keep in sync. The URL is the API.
@@ -60,6 +65,29 @@
 </section>
 
 <section class="container py-5">
+    <div class="row g-4 align-items-start">
+        <?php foreach ([
+            ['Create an account', 'You get a project, a first bucket and a quota straight away. Nothing to configure.'],
+            ['Upload', 'Drag files into the panel, or POST them from your own code with an API key.'],
+            ['Use the URL', 'Paste it into an img tag. Add <code>?w=400</code> when you want it smaller.'],
+        ] as $index => [$title, $text]) : ?>
+            <div class="col-md-4">
+                <div class="step">
+                    <div class="n"><?= $index + 1 ?></div>
+                    <div>
+                        <h6><?= $title ?></h6>
+                        <p><?= $text ?></p>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach ?>
+    </div>
+</section>
+
+<section class="container pb-5">
+    <h2 class="section-title">What you get</h2>
+    <p class="hint mb-4">The parts that are tedious to build and easy to get subtly wrong.</p>
+
     <div class="row g-3">
         <?php
         $features = [
@@ -74,7 +102,7 @@
         foreach ($features as [$icon, $title, $text]) : ?>
             <div class="col-md-4">
                 <div class="feature">
-                    <i class="bi <?= $icon ?>"></i>
+                    <div class="icon"><i class="bi <?= $icon ?>"></i></div>
                     <h6><?= $title ?></h6>
                     <p><?= $text ?></p>
                 </div>

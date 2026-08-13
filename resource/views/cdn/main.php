@@ -39,7 +39,10 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="{{ asset('/assets/libs/notify/style.css') }}">
+
+    <?php # After select2, which it restyles. ?>
     <link rel="stylesheet" href="{{ asset('/assets/css/cdn.css') }}">
     @yield('header')
 </head>
@@ -104,6 +107,7 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="{{ asset('/assets/libs/notify/script.js') }}"></script>
     <script>
         // Guarded: this used to start with a call into the notify library, and
@@ -121,6 +125,29 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
             const button = $(this), original = button.html();
             button.html('<i class="bi bi-check2"></i> Copied');
             setTimeout(() => button.html(original), 1500);
+        });
+
+        // Select2 on every select that has not opted out. The search box only
+        // appears once a list is long enough to need one - on a three-option
+        // filter it is furniture.
+        if ($.fn.select2) $('select:not([data-plain])').each(function () {
+            const field = $(this);
+
+            field.select2({
+                width: '100%',
+                minimumResultsForSearch: field.find('option').length > 8 ? 0 : Infinity,
+                placeholder: field.data('placeholder') || null,
+                allowClear: Boolean(field.data('placeholder')),
+                closeOnSelect: !field.prop('multiple'),
+            });
+        });
+
+        // Filters that submit as soon as they change. Bound through jQuery
+        // rather than an inline onchange: select2 raises its change event on
+        // the original element through jQuery, and an inline handler never
+        // hears it - which would leave every filter in the panel doing nothing.
+        $('select[data-autosubmit], input[data-autosubmit]').on('change', function () {
+            this.form.submit();
         });
     </script>
     @yield('footer')
