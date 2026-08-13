@@ -3,175 +3,109 @@
 @section('lede')<?= _l('cdn.settings.lede') ?>@endsection
 
 @section('body')
+<?php
+/**
+ * What is left here is the account.
+ *
+ * Projects have their own pages, and the installation block an operator used to
+ * find at the bottom of this one is under Administration - it was the only
+ * thing here that had nothing to do with the signed-in account.
+ */
+$user = zFramework\Core\Facades\Auth::user() ?: [];
+
+# host() is the framework's - scheme and host, proxy headers accounted for.
+$api = host() . rtrim((string) (config('cdn.api.route') ?: '/api/cdn'), '/') . '/v1';
+?>
 
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h6>{{ _l('cdn.settings.projects') }}</h6>
-                <p class="hint">
-                    A project is a namespace in your URLs. Bucket names only have to be unique inside one, so two
-                    projects can both have a bucket called <code>photos</code>.
-                </p>
+                <h6>{{ _l('cdn.settings.account') }}</h6>
+                <p class="hint">{{ _l('cdn.settings.account-lede') }}</p>
 
-                @foreach($projects as $project)
-                <div class="border rounded p-3 mb-2" style="border-color: var(--line) !important">
-                    <form action="{{ route('cdn-admin.projects.save', ['id' => $project['id']]) }}" method="POST">
-                        <?= csrf() ?>
-                        <div class="input-group input-group-sm mb-2">
-                            <input name="name" class="form-control" value="{{ $project['name'] }}" required>
-                            <button class="btn btn-outline-secondary">{{ _l('cdn.common.rename') }}</button>
-                        </div>
-                    </form>
+                <dl class="row small mb-0">
+                    <dt class="col-4 hint">{{ _l('cdn.auth.username') }}</dt>
+                    <dd class="col-8 notranslate" translate="no">{{ $user['username'] }}</dd>
 
-                    <div class="mono hint notranslate" translate="no">{{ rtrim(config('cdn.delivery.url-prefix'), '/') }}/{{ $project['slug'] }}/…</div>
+                    <dt class="col-4 hint">{{ _l('cdn.auth.email') }}</dt>
+                    <dd class="col-8 mono truncate notranslate" translate="no">{{ $user['email'] }}</dd>
 
-                    <div class="d-flex justify-content-between small mt-2">
-                        <span class="hint">{{ _l('cdn.settings.stored') }}</span>
-                        <span>
-                            {{ File::humanFileSize($project['storage_used']) }}
-                            @if($project['storage_quota'] > 0)
-                            <span class="hint">of {{ File::humanFileSize($project['storage_quota']) }}</span>
-                            @endif
-                        </span>
-                    </div>
-
-                    <div class="d-flex justify-content-between small">
-                        <span class="hint">{{ _l('cdn.settings.transfer') }}</span>
-                        <span>
-                            {{ File::humanFileSize($project['bandwidth_used']) }}
-                            @if($project['bandwidth_quota'] > 0)
-                            <span class="hint">of {{ File::humanFileSize($project['bandwidth_quota']) }}</span>
-                            @endif
-                        </span>
-                    </div>
-                </div>
-                @endforeach
-
-                <form action="{{ route('cdn-admin.projects.create') }}" method="POST" class="mt-3">
-                    <?= csrf() ?>
-                    <label class="form-label">{{ _l('cdn.settings.add') }}</label>
-                    <div class="input-group input-group-sm">
-                        <input name="name" class="form-control" placeholder="{{ _l('cdn.settings.add-holder') }}" required>
-                        <button class="btn btn-primary">{{ _l('cdn.common.create') }}</button>
-                    </div>
-                    <div class="form-text">
-                        The URL name is taken from this and cannot be changed afterwards — it is in every address the
-                        project serves.
-                    </div>
-                </form>
+                    <dt class="col-4 hint">{{ _l('cdn.common.projects') }}</dt>
+                    <dd class="col-8">
+                        <a href="{{ route('cdn-admin.projects') }}">{{ count($projects) }}</a>
+                    </dd>
+                </dl>
             </div>
         </div>
 
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6>{{ _l('cdn.settings.allowance') }}</h6>
+                <p class="hint">{{ _l('cdn.settings.allowance-lede') }}</p>
+
+                <div class="d-flex justify-content-between small">
+                    <span class="hint">{{ _l('cdn.common.storage') }}</span>
+                    <span class="notranslate" translate="no">
+                        {{ File::humanFileSize($usage['used']) }}
+                        <?php if ($usage['quota'] > 0) : ?>
+                            <span class="hint">{{ _l('cdn.common.of') }} {{ File::humanFileSize($usage['quota']) }}</span>
+                        <?php else : ?>
+                            <span class="hint">{{ _l('cdn.operator.unlimited') }}</span>
+                        <?php endif ?>
+                    </span>
+                </div>
+
+                <?php if ($usage['quota'] > 0) :
+                    $share = min(100, round($usage['used'] / $usage['quota'] * 100));
+                ?>
+                    <div class="quota <?= $share >= 95 ? 'full' : ($share >= 80 ? 'warn' : '') ?> mb-2">
+                        <div style="width: <?= $share ?>%"></div>
+                    </div>
+                <?php endif ?>
+
+                <div class="d-flex justify-content-between small mt-2">
+                    <span class="hint">{{ _l('cdn.common.transfer') }} <span class="notranslate" translate="no"><?= date('Y-m') ?></span></span>
+                    <span class="notranslate" translate="no">
+                        {{ File::humanFileSize($usage['bandwidth']) }}
+                        <?php if ($usage['bandwidth-quota'] > 0) : ?>
+                            <span class="hint">{{ _l('cdn.common.of') }} {{ File::humanFileSize($usage['bandwidth-quota']) }}</span>
+                        <?php endif ?>
+                    </span>
+                </div>
+
+                <p class="hint small mt-3 mb-0">{{ _l('cdn.settings.allowance-note') }}</p>
+            </div>
+        </div>
     </div>
 
     <div class="col-lg-6">
-        <?php if ($system) : ?>
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <h6 class="mb-0">{{ _l('cdn.settings.installation') }}</h6>
-                        <span class="badge text-bg-primary">operator</span>
-                    </div>
-                    <p class="hint">What this machine can actually do — config can ask for things it cannot deliver.</p>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6>{{ _l('cdn.settings.api') }}</h6>
+                <p class="hint">{{ _l('cdn.settings.api-lede') }}</p>
 
-                    <dl class="row small mb-0">
-                        <dt class="col-5 text-secondary">Image engine</dt>
-                        <dd class="col-7">
-                            @if($system['capabilities']['driver'] == 'none')
-                            <span class="badge text-bg-danger">none</span>
-                            <div class="text-secondary">No gd or imagick — resizing is skipped and originals are served.</div>
-                            @else
-                            <span class="badge text-bg-success">{{ $system['capabilities']['driver'] }}</span>
-                            @endif
-                        </dd>
-
-                        <dt class="col-5 text-secondary">Can write</dt>
-                        <dd class="col-7">
-                            @foreach($system['capabilities']['formats'] as $format => $supported)
-                            <span class="badge text-bg-{{ $supported ? 'success' : 'secondary' }}">{{ $format }}</span>
-                            @endforeach
-                        </dd>
-
-                        <dt class="col-5 text-secondary">Shared cache</dt>
-                        <dd class="col-7">
-                            <span class="badge text-bg-{{ $system['capabilities']['redis'] ? 'success' : 'secondary' }}">
-                                redis {{ $system['capabilities']['redis'] ? 'on' : 'off' }}
-                            </span>
-                            <span class="badge text-bg-{{ $system['capabilities']['apcu'] ? 'success' : 'secondary' }}">
-                                apcu {{ $system['capabilities']['apcu'] ? 'on' : 'off' }}
-                            </span>
-                        </dd>
-
-                        <dt class="col-5 text-secondary">Content sniffing</dt>
-                        <dd class="col-7">
-                            <span class="badge text-bg-{{ $system['capabilities']['finfo'] ? 'success' : 'danger' }}">
-                                finfo {{ $system['capabilities']['finfo'] ? 'available' : 'missing' }}
-                            </span>
-                        </dd>
-                    </dl>
-
-                    <hr>
-
-                    @foreach($system['disks'] as $name => $disk)
-                    <div class="d-flex justify-content-between small">
-                        <span class="mono truncate" title="{{ $disk['root'] }}">{{ $name }}</span>
-                        <span>
-                            @if($disk['writable'] === false)<span class="badge text-bg-danger">not writable</span>@endif
-                            @if($disk['free'] !== null){{ File::humanFileSize($disk['free']) }} free @endif
-                        </span>
-                    </div>
-                    @endforeach
-
-                    <div class="d-flex justify-content-between small mt-1">
-                        <span class="text-secondary">Generated images</span>
-                        <span>{{ number_format($system['variants']['files']) }} files, {{ File::humanFileSize($system['variants']['bytes']) }}</span>
-                    </div>
+                <div class="input-group input-group-sm mb-2">
+                    <input class="form-control mono notranslate" translate="no" value="{{ $api }}" readonly>
+                    <button class="btn btn-outline-secondary" data-copy="{{ $api }}">
+                        <i class="bi bi-clipboard"></i> {{ _l('cdn.common.copy') }}
+                    </button>
                 </div>
+
+                <a href="{{ route('cdn-admin.keys') }}" class="btn btn-sm btn-outline-secondary">{{ _l('cdn.menu.keys') }}</a>
+                <a href="{{ route('docs') }}" target="_blank" class="btn btn-sm btn-link">{{ _l('cdn.menu.docs') }}</a>
             </div>
+        </div>
 
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h6 class="mb-3">{{ _l('cdn.settings.all-projects') }}</h6>
-
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0">
-                            <thead><tr><th>Project</th><th>URL</th><th class="text-end">Stored</th><th class="text-end">Transfer</th></tr></thead>
-                            <tbody>
-                                @foreach($system['projects'] as $row)
-                                <tr>
-                                    <td class="truncate">{{ $row['name'] }}</td>
-                                    <td class="mono hint">/{{ $row['slug'] }}/</td>
-                                    <td class="text-end">{{ File::humanFileSize($row['storage_used']) }}</td>
-                                    <td class="text-end">{{ File::humanFileSize($row['bandwidth_used']) }}</td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
+        <?php if ($operator) : ?>
             <div class="card">
                 <div class="card-body">
-                    <h6 class="mb-2">{{ _l('cdn.settings.maintenance') }}</h6>
-                    <p class="hint">Run from cron. <code>cron/cdn.php</code> ships with the schedule.</p>
+                    <h6>{{ _l('cdn.menu.operator') }}</h6>
+                    <p class="hint">{{ _l('cdn.settings.operator-lede') }}</p>
 
-                    <pre class="small mb-0 bg-light p-3 rounded"><code>php cdn gc        # unused files, expired uploads
-php cdn rollup    # yesterday's traffic into the charts
-php cdn prune     # trim the request log
-php cdn verify    # check every record against the disk</code></pre>
-                </div>
-            </div>
-        <?php else : ?>
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="mb-2">{{ _l('cdn.settings.quotas') }}</h6>
-                    <p class="hint mb-0">
-                        Storage is what you have uploaded. Transfer is what visitors have downloaded this month, and
-                        it resets on the first. If either fills up, uploads or delivery stop until there is room —
-                        the operator of this installation can raise them.
-                    </p>
+                    <a href="{{ route('cdn-admin.operator.users') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-shield-lock"></i> {{ _l('cdn.settings.operator-open') }}
+                    </a>
                 </div>
             </div>
         <?php endif ?>

@@ -108,9 +108,21 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin'), '/cdn-admin')
         # question and used to be two.
         Route::get('/activity', [AdminController::class, 'activity'])->name('activity');
 
+        # Projects have pages of their own. They used to be a block on the
+        # settings page, which is where a thing goes when nobody has decided
+        # what it is.
+        Route::get('/projects', [AdminController::class, 'projects'])->name('projects');
+        Route::get('/projects/create', [AdminController::class, 'projectForm'])->name('projects.create');
+        Route::post('/projects/create', [AdminController::class, 'projectCreate'])->name('projects.create.save');
+        Route::get('/projects/{id}', [AdminController::class, 'project'])->name('projects.show');
+        Route::post('/projects/{id}', [AdminController::class, 'projectSave'])->name('projects.save');
+        Route::post('/projects/{id}/delete', [AdminController::class, 'projectDelete'])->name('projects.delete');
+
+        # The switcher in the sidebar. A GET because it is a link with
+        # javascript off, and it changes nothing but which rows are listed.
+        Route::get('/switch', [AdminController::class, 'projectSwitch'])->name('projects.switch');
+
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-        Route::post('/settings/projects', [AdminController::class, 'projectCreate'])->name('projects.create');
-        Route::post('/settings/projects/{id}', [AdminController::class, 'projectSave'])->name('projects.save');
     });
 
 # Administering the installation rather than a project. Its own middleware, not
@@ -126,11 +138,11 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin') . '/admin', '/cd
         Route::get('/system', [OperatorController::class, 'system'])->name('system');
         Route::get('/log', [OperatorController::class, 'audits'])->name('audits');
 
+        Route::post('/users/{id}/quota', [OperatorController::class, 'quota'])->name('users.quota');
         Route::post('/users/{id}/status', [OperatorController::class, 'userStatus'])->name('users.status');
         Route::post('/users/{id}/operator', [OperatorController::class, 'operator'])->name('users.operator');
         Route::post('/users/{id}/delete', [OperatorController::class, 'userDelete'])->name('users.delete');
 
-        Route::post('/projects/{id}/quota', [OperatorController::class, 'quota'])->name('projects.quota');
         Route::post('/projects/{id}/bandwidth', [OperatorController::class, 'bandwidthReset'])->name('projects.bandwidth');
         Route::post('/projects/{id}/status', [OperatorController::class, 'projectStatus'])->name('projects.status');
 

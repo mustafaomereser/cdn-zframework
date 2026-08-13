@@ -35,6 +35,7 @@ class OperatorController
     {
         return view('cdn.pages.admin.users', [
             'users'  => Operator::users(),
+            'units'  => ['B' => 1, 'KB' => 1024, 'MB' => 1024 ** 2, 'GB' => 1024 ** 3, 'TB' => 1024 ** 4],
             'totals' => Operator::totals(),
             'locked' => count((array) Support::config('auth.operators', [])) > 0,
         ]);
@@ -110,15 +111,15 @@ class OperatorController
      */
     public function quota(string $id): mixed
     {
-        $project = Operator::project($id);
+        $user = Operator::user($id);
 
         Operator::quota(
-            $project,
+            $user,
             Operator::bytes(request('storage'), request('storage-unit')),
             Operator::bytes(request('bandwidth'), request('bandwidth-unit'))
         );
 
-        Alerts::success(_l('cdn.alerts.quota-saved', ['project' => $project['name']]));
+        Alerts::success(_l('cdn.alerts.quota-saved', ['project' => $user['username']]));
 
         return back();
     }

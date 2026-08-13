@@ -555,9 +555,15 @@ return [
          *          can do, which for `terminal` includes migrating the database
          *          and rewriting the framework on disk.
          *
-         *          Left out of the defaults on purpose: db (migrates, can drop
-         *          columns), release and ---update (rewrite zFramework), make
-         *          (writes php files into the application), test.
+         *          `db` is in the defaults because migrating after a deploy is
+         *          the most ordinary maintenance there is - but know what it can
+         *          do: it alters tables and drops columns a migration no longer
+         *          declares. Take it out on an installation where the person
+         *          with the panel is not the person who owns the schema.
+         *
+         *          Left out on purpose: release and ---update (rewrite zFramework
+         *          on disk), make (writes php files into the application), test
+         *          (runs whatever it finds).
          *
          * timeout  Seconds. A command that never returns is a worker that never
          *          returns.
@@ -573,7 +579,7 @@ return [
 
             'allow'   => [
                 'cdn'      => ['gc', 'verify', 'rollup', 'prune', 'stats', 'purge', 'sign', 'key', 'translate'],
-                'terminal' => ['route', 'cache', 'queue', 'security', 'bench'],
+                'terminal' => ['route', 'cache', 'queue', 'security', 'bench', 'db'],
             ],
         ],
     ],

@@ -90,31 +90,14 @@ $split = function (int $bytes) use ($units): array {
 
             <div class="row g-3">
                 <div class="col-lg-7">
-                    <form method="POST" action="{{ route('cdn-admin.operator.projects.quota', ['id' => $project['id']]) }}">
-                        <?= csrf() ?>
-
-                        <label class="form-label small mb-1">{{ _l('cdn.operator.storage-quota') }}</label>
-                        <div class="input-group input-group-sm mb-2">
-                            <input name="storage" class="form-control" value="<?= $storageAmount ?>" inputmode="decimal">
-                            <select name="storage-unit" class="form-select" style="max-width: 92px" data-plain>
-                                <?php foreach (array_keys($units) as $unit) : ?>
-                                    <option value="<?= $unit ?>" <?= $unit === $storageUnit ? 'selected' : '' ?>><?= $unit ?></option>
-                                <?php endforeach ?>
-                            </select>
-                        </div>
-
-                        <label class="form-label small mb-1">{{ _l('cdn.operator.bandwidth-quota') }}</label>
-                        <div class="input-group input-group-sm mb-3">
-                            <input name="bandwidth" class="form-control" value="<?= $bandwidthAmount ?>" inputmode="decimal">
-                            <select name="bandwidth-unit" class="form-select" style="max-width: 92px" data-plain>
-                                <?php foreach (array_keys($units) as $unit) : ?>
-                                    <option value="<?= $unit ?>" <?= $unit === $bandwidthUnit ? 'selected' : '' ?>><?= $unit ?></option>
-                                <?php endforeach ?>
-                            </select>
-                        </div>
-
-                        <button class="btn btn-sm btn-primary">{{ _l('cdn.common.save') }}</button>
-                    </form>
+                    <?php # The allowance is the account's, and it is edited on
+                          # the Accounts page - a project of its own has no
+                          # quota to set, it has a share of one. ?>
+                    <div class="hint small">
+                        <?= _l('cdn.operator.quota-on-account', [
+                            'user' => e((string) ($project['owner']['username'] ?? '—'), false),
+                        ]) ?>
+                    </div>
                 </div>
 
                 <div class="col-lg-5">

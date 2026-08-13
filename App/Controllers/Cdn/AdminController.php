@@ -430,38 +430,13 @@ class AdminController
      */
     public function settings(): mixed
     {
-        $system = null;
-
-        if (Tenant::isOperator()) {
-            $disks = [];
-            foreach ((array) Support::config('storage.disks', []) as $name => $disk) {
-                $disks[$name] = [
-                    'root'     => $disk['root'] ?? null,
-                    'writable' => is_dir($disk['root'] ?? '') ? is_writable($disk['root']) : null,
-                    'free'     => Storage::freeSpace($name),
-                ];
-            }
-
-            $system = [
-                'capabilities' => [
-                    'driver'  => Transform::driver(),
-                    'formats' => array_combine(
-                        ['jpg', 'png', 'gif', 'webp', 'avif'],
-                        array_map(fn($format) => Transform::supports($format), ['jpg', 'png', 'gif', 'webp', 'avif'])
-                    ),
-                    'apcu'  => function_exists('apcu_fetch'),
-                    'redis' => \zFramework\Core\Facades\Redis::available('cache'),
-                    'finfo' => class_exists('finfo'),
-                ],
-                'disks'    => $disks,
-                'variants' => Storage::measure(Storage::variantRoot()),
-                'projects' => (new Projects)->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get(),
-            ];
-        }
-
+        # The installation block that used to be here now has a page of its own
+        # under Administration - it was the only thing on this page that had
+        # nothing to do with the signed-in account.
         return view('cdn.pages.settings', [
             'projects' => Tenant::projects(),
-            'system'   => $system,
+            'usage'    => Tenant::usage(),
+            'operator' => Tenant::isOperator(),
         ]);
     }
 
@@ -471,6 +446,75 @@ class AdminController
      * A second project is a second namespace in the url, which is the reason to
      * want one: separating a staging site's assets from a live one's, or one
      * client's from another's.
+     *
+     * @return mixed
+     */
+    public function projects(): mixed
+    {
+        $rows = [];
+
+        foreach (Tenant::projects() as $project) {
+            $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->get();
+
+            $rows[] = $project + [
+                'buckets' => count($buckets),
+                'files'   => array_sum(array_map(fn($bucket) => (int) $bucket['files_count'], $buckets)),
+                'used'    => (int) $project['storage_used'],
+                'quota'   => (int) $project['storage_quota'],
+            ];
+        }
+
+        return view('cdn.pages.projects.index', [
+            'rows'   => $rows,
+            'prefix' => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
+        ]);
+    }
+
+    /**
+     * One project: its buckets, what it is using, and the two things that can
+     * be done to it.
+     *
+     * The buckets are here because "which buckets are in this project" was a
+     * question the panel could not answer - the bucket list was every bucket of
+     * every project in one table.
+     *
+     * @param string $id
+     * @return mixed
+     */
+    public function project(string $id): mixed
+    {
+        $project = Tenant::project($id);
+        $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'ASC'])->get();
+
+        return view('cdn.pages.projects.show', [
+            'project' => $project,
+            'buckets' => $buckets,
+            'files'   => array_sum(array_map(fn($bucket) => (int) $bucket['files_count'], $buckets)),
+            'month'   => ($project['bandwidth_period'] ?? null) === date('Y-m') ? (int) $project['bandwidth_used'] : 0,
+            'usage'   => Tenant::usage(),
+            'only'    => count(Tenant::projects()) < 2,
+            'prefix'  => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
+        ]);
+    }
+
+    /**
+     * @return mixed
+     */
+    public function projectForm(): mixed
+    {
+        return view('cdn.pages.projects.create', [
+            'account' => Tenant::accountSlug(Auth::user() ?: []),
+            'prefix'  => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
+        ]);
+    }
+
+    /**
+     * Add a project.
+     *
+     * A second project is a second namespace in the url, which is the reason to
+     * want one: separating a staging site's assets from a live one's, or one
+     * client's from another's. It brings no extra quota with it - that belongs
+     * to the account.
      *
      * @return mixed
      */
@@ -492,7 +536,71 @@ class AdminController
 
         Alerts::success(_l('cdn.alerts.project-created', ['path' => '/' . $project['slug'] . '/']));
 
-        return redirect(route('cdn-admin.settings'));
+        return redirect(route('cdn-admin.projects.show', ['id' => $project['id']]));
+    }
+
+    /**
+     * Delete a project, its buckets and its files.
+     *
+     * The files go one at a time through Uploader::delete rather than by
+     * dropping rows: that is what releases each object's reference, and an
+     * object nothing references is what the collector reclaims.
+     *
+     * @param string $id
+     * @return mixed
+     */
+    public function projectDelete(string $id): mixed
+    {
+        $project = Tenant::project($id);
+
+        # An account with no project is an account that cannot upload anything,
+        # and the panel is built on there being one.
+        if (count(Tenant::projects()) < 2) {
+            Alerts::danger(_l('cdn.alerts.project-last'));
+
+            return back();
+        }
+
+        $files = (new Files)->where('project_id', $project['id'])->closureMode(false)->get();
+
+        foreach ($files as $file) Uploader::delete($file);
+
+        foreach ((new Buckets)->where('project_id', $project['id'])->closureMode(false)->get() as $bucket) {
+            Purger::bucket($bucket, 'panel:' . Auth::id());
+            Registry::forgetBucket($bucket);
+        }
+
+        (new Buckets)->where('project_id', $project['id'])->delete();
+        (new ApiKeys)->where('project_id', $project['id'])->delete();
+        (new Projects)->where('id', $project['id'])->delete();
+
+        Registry::forgetProject((int) $project['id']);
+
+        # The switcher may have been pointing at it.
+        Tenant::select(null);
+        Tenant::flushRequestState();
+
+        Alerts::success(_l('cdn.alerts.project-deleted', ['name' => $project['name'], 'files' => count($files)]));
+
+        return redirect(route('cdn-admin.projects'));
+    }
+
+    /**
+     * Point the panel at one project, or at all of them.
+     *
+     * @return mixed
+     */
+    public function projectSwitch(): mixed
+    {
+        Tenant::select(request('id'));
+
+        # Back to the same page, now listing one project's rows - except from a
+        # project's own page, which would be somebody else's after the switch.
+        $back = (string) ($_SERVER['HTTP_REFERER'] ?? '');
+
+        if (str_contains($back, '/projects/')) return redirect(route('cdn-admin.dashboard'));
+
+        return back();
     }
 
     /**

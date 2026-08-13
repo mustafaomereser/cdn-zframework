@@ -5,6 +5,23 @@
 @section('body')
 <?php include(BASE_PATH . '/resource/views/cdn/partials/operator-nav.php') ?>
 
+<?php
+/**
+ * A quota is edited as a number and a unit rather than as bytes. Nobody types
+ * 5368709120, and everybody who has had to has typed it wrong once. The value
+ * shown back is the largest unit the stored number divides into cleanly.
+ */
+$split = function (int $bytes) use ($units): array {
+    if ($bytes <= 0) return [0, 'GB'];
+
+    foreach (array_reverse($units, true) as $unitName => $size) {
+        if ($bytes >= $size && $bytes % $size === 0) return [(int) ($bytes / $size), $unitName];
+    }
+
+    return [round($bytes / (1024 ** 3), 2), 'GB'];
+};
+?>
+
 <?php # The four numbers somebody opens this page to see. ?>
 <div class="row g-3 mb-3">
     <?php foreach ([
@@ -93,11 +110,11 @@
                             <td class="text-end small notranslate" translate="no">{{ File::humanFileSize($user['bandwidth']) }}</td>
 
                             <td class="text-end text-nowrap">
-                                <?php # Quotas are per project, so this is a link to the project rows for this account. ?>
-                                <a class="btn btn-sm btn-outline-secondary"
-                                   href="{{ route('cdn-admin.operator.projects') }}?q=<?= urlencode((string) ($user['projects'][0]['name'] ?? '')) ?>">
+                                <?php # The allowance belongs to the account, so it is edited here. ?>
+                                <button class="btn btn-sm btn-outline-secondary" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#quota-<?= $user['id'] ?>">
                                     {{ _l('cdn.operator.quota') }}
-                                </a>
+                                </button>
 
                                 <?php if (!$self) : ?>
                                     <form class="d-inline" method="POST" action="{{ route('cdn-admin.operator.users.status', ['id' => $user['id']]) }}">
@@ -126,6 +143,50 @@
                                         <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                                     </form>
                                 <?php endif ?>
+                            </td>
+                        </tr>
+
+                        <?php
+                        [$storageAmount, $storageUnit]     = $split((int) $user['quota']);
+                        [$bandwidthAmount, $bandwidthUnit] = $split((int) ($user['bandwidth-quota'] ?? 0));
+                        ?>
+                        <tr class="collapse" id="quota-<?= $user['id'] ?>">
+                            <td colspan="5" class="bg-body-tertiary">
+                                <form class="row g-2 align-items-end" method="POST"
+                                      action="{{ route('cdn-admin.operator.users.quota', ['id' => $user['id']]) }}">
+                                    <?= csrf() ?>
+
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">{{ _l('cdn.operator.storage-quota') }}</label>
+                                        <div class="input-group input-group-sm">
+                                            <input name="storage" class="form-control" value="<?= $storageAmount ?>" inputmode="decimal">
+                                            <?php # data-plain: select2 replaces the select with a span the
+                                                  # input-group does not recognise, and it drops to its own line. ?>
+                                            <select name="storage-unit" class="form-select" style="max-width: 92px" data-plain>
+                                                <?php foreach (array_keys($units) as $unit) : ?>
+                                                    <option value="<?= $unit ?>" <?= $unit === $storageUnit ? 'selected' : '' ?>><?= $unit ?></option>
+                                                <?php endforeach ?>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">{{ _l('cdn.operator.bandwidth-quota') }}</label>
+                                        <div class="input-group input-group-sm">
+                                            <input name="bandwidth" class="form-control" value="<?= $bandwidthAmount ?>" inputmode="decimal">
+                                            <select name="bandwidth-unit" class="form-select" style="max-width: 92px" data-plain>
+                                                <?php foreach (array_keys($units) as $unit) : ?>
+                                                    <option value="<?= $unit ?>" <?= $unit === $bandwidthUnit ? 'selected' : '' ?>><?= $unit ?></option>
+                                                <?php endforeach ?>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-4">
+                                        <button class="btn btn-sm btn-primary">{{ _l('cdn.common.save') }}</button>
+                                        <span class="hint small ms-1">{{ _l('cdn.operator.zero-unlimited') }}</span>
+                                    </div>
+                                </form>
                             </td>
                         </tr>
                     <?php endforeach ?>

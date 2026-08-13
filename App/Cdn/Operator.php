@@ -84,15 +84,19 @@ class Operator
 
             $user['projects']  = $own;
             $user['storage']   = array_sum(array_map(fn($p) => (int) $p['storage_used'], $own));
-            $user['quota']     = array_sum(array_map(fn($p) => (int) $p['storage_quota'], $own));
             $user['bandwidth'] = array_sum(array_map(
                 fn($p) => ($p['bandwidth_period'] ?? null) === date('Y-m') ? (int) $p['bandwidth_used'] : 0,
                 $own
             ));
 
-            # A quota of 0 is unlimited, and one unlimited project makes the
-            # account's total unlimited - not the sum of the others.
-            foreach ($own as $project) if ((int) $project['storage_quota'] === 0) $user['quota'] = 0;
+            # The allowance is the account's own, not a sum over its projects.
+            # Accounts that predate the column read it from their oldest project
+            # instead, which is what Tenant::allowance() does - and it writes it
+            # back, so this is the last time that costs anything.
+            $allowance = Tenant::allowance($user);
+
+            $user['quota']           = $allowance['storage'];
+            $user['bandwidth-quota'] = $allowance['bandwidth'];
 
             $user['operator'] = Tenant::isOperator($user);
         }
@@ -163,31 +167,42 @@ class Operator
     }
 
     /**
-     * Set a project's quotas. Bytes; 0 is unlimited.
+     * Set an account's allowance. Bytes; 0 is unlimited.
      *
-     * @param array $project
+     * Written to the account and then down to its projects. The delivery path
+     * has a project row in hand and nothing else, and a join to the owner on
+     * the hottest query in the application to find a number that changes twice
+     * a year is not a trade worth making.
+     *
+     * @param array $user
      * @param int   $storage
      * @param int   $bandwidth
      * @return void
      */
-    public static function quota(array $project, int $storage, int $bandwidth): void
+    public static function quota(array $user, int $storage, int $bandwidth): void
     {
         $storage   = max(0, $storage);
         $bandwidth = max(0, $bandwidth);
 
-        (new Projects)->where('id', $project['id'])->update([
+        (new User)->where('id', $user['id'])->update([
             'storage_quota'   => $storage,
             'bandwidth_quota' => $bandwidth,
         ]);
 
-        # The delivery path reads the project row through the registry cache, so
-        # a quota raised here would otherwise take up to registry-ttl to be felt
-        # by the person who was refused.
-        Registry::forgetProject((int) $project['id']);
+        foreach ((new Projects)->where('owner_id', $user['id'])->closureMode(false)->get() as $project) {
+            (new Projects)->where('id', $project['id'])->update([
+                'storage_quota'   => $storage,
+                'bandwidth_quota' => $bandwidth,
+            ]);
 
-        self::audit('quota', 'project', $project, [
-            'storage'   => [(int) $project['storage_quota'], $storage],
-            'bandwidth' => [(int) $project['bandwidth_quota'], $bandwidth],
+            # Otherwise a raised quota is not felt by the person who was refused
+            # until registry-ttl expires.
+            Registry::forgetProject((int) $project['id']);
+        }
+
+        self::audit('quota', 'user', $user, [
+            'storage'   => [(int) ($user['storage_quota'] ?? 0), $storage],
+            'bandwidth' => [(int) ($user['bandwidth_quota'] ?? 0), $bandwidth],
         ]);
     }
 

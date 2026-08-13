@@ -44,3 +44,13 @@ Route::get('/docs/{language}', [App\Controllers\Cdn\DocsController::class, 'inde
 # routes on `/`, one of which POSTed straight into the terminal - a remote shell
 # on a host whose whole job is to be publicly reachable.
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+
+
+Route::get('/db-migrate', function () {
+    echo "<style>body{background: black} pre {background: #111; font-size: 11pt; padding: 10px; border-radius: 5px}</style>";
+    ob_start();
+    zFramework\Kernel\Terminal::begin(array_merge(['terminal', 'db', 'migrate', '--web'], (request('force') == true ? ['--force'] : [])));
+    $logs = ob_get_clean();
+    echo "<pre>" . trim($logs) . "</pre>";
+});

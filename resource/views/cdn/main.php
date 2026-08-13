@@ -15,6 +15,7 @@ use zFramework\Core\Helpers\File;
 
 $menu = [
     'cdn-admin.dashboard' => ['bi-grid-1x2',     'overview'],
+    'cdn-admin.projects'  => ['bi-boxes',        'projects'],
     'cdn-admin.files'     => ['bi-file-earmark', 'files'],
     'cdn-admin.buckets'   => ['bi-folder2',      'buckets'],
     'cdn-admin.keys'      => ['bi-key',          'keys'],
@@ -72,12 +73,30 @@ $sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M')
         <nav class="sidebar">
             <div class="brand"><i class="bi bi-hdd-network"></i> <span class="notranslate" translate="no">{{ config('app.title') }}</span></div>
 
-            <?php # A project name is the user's own text, and a slug is in a url. ?>
-            <div class="project truncate notranslate" translate="no">
-                <?= count($projects) > 1
-                    ? count($projects) . ' ' . _l('cdn.common.projects')
-                    : e($projects[0]['name'], false) ?>
-            </div>
+            <?php
+            # The switcher. Everything the panel lists is scoped to whatever is
+            # selected here - files, buckets, keys, activity - because a panel
+            # that shows three projects' rows in one table is a panel nobody can
+            # read. "All projects" is still there for the overview it used to be.
+            #
+            # A form with a select rather than a list of links: with three
+            # projects a list is fine and with thirty it is the sidebar.
+            $selected = Tenant::selected();
+            ?>
+            <form class="project-switch" action="<?= route('cdn-admin.projects.switch') ?>" method="GET" id="project-switch">
+                <?php # No data-placeholder: select2 turns a placeholder into a
+                      # clear button and takes the empty option out of the list,
+                      # which is how "All projects" became unreachable once one
+                      # was picked. It is an ordinary option instead. ?>
+                <select name="id" class="form-select form-select-sm notranslate" translate="no" data-autosubmit>
+                    <option value=""><?= _l('cdn.projects.all') ?></option>
+                    <?php foreach ($projects as $option) : ?>
+                        <option value="<?= $option['id'] ?>" <?= $selected && (int) $selected['id'] === (int) $option['id'] ? 'selected' : '' ?>>
+                            <?= e($option['name'], false) ?>
+                        </option>
+                    <?php endforeach ?>
+                </select>
+            </form>
 
             <?php foreach ($menu as $route => [$icon, $key]) :
                 $path = parse_url(route($route), PHP_URL_PATH);

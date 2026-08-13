@@ -32,6 +32,19 @@ class Users
             # form.
             'is_operator' => ['tinyint:1', 'default:0'],
 
+            # The account's allowance, in bytes, 0 for unlimited. It lives here
+            # rather than on the project because a project used to come with a
+            # quota of its own - which made "create a project" a way of granting
+            # yourself another five gigabytes.
+            #
+            # Projects still carry a copy: the delivery path has a project row in
+            # hand and nothing else, and going back to the database for the
+            # owner on every request to a suspended-or-not asset is a join on the
+            # hottest query in the application. Changing the account's numbers
+            # writes them down to its projects.
+            'storage_quota'   => ['bigint', 'default:0'],
+            'bandwidth_quota' => ['bigint', 'default:0'],
+
             'timestamps',
             'softDelete',
         ];
