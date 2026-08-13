@@ -145,14 +145,17 @@ class Tenant
         # the account's bill, and it does not change because somebody is looking
         # at one project.
         foreach (self::projects() as $project) {
-            # Except a project with numbers of its own. It is measured against
-            # its own ceiling, so counting it here too would spend the shared
-            # allowance twice - give a project 50 GB and the account it belongs
-            # to would watch its own 5 GB fill up with bytes that are not
-            # charged to it.
-            if (($project['quota_mode'] ?? 'account') === 'custom') continue;
+            # Except an axis the project has its own number for. It is measured
+            # against its own ceiling, so counting it here too would spend the
+            # shared allowance twice - give a project 50 GB and the account it
+            # belongs to would watch its own 5 GB fill up with bytes that are
+            # not charged to it.
+            #
+            # The two are separate: a project can have its own disk allowance
+            # and still share the account's transfer.
+            if (($project['storage_mode'] ?? 'account') !== 'custom') $used += (int) $project['storage_used'];
 
-            $used += (int) $project['storage_used'];
+            if (($project['bandwidth_mode'] ?? 'account') === 'custom') continue;
 
             # The counter belongs to a month. A row still carrying last month's
             # period reads as zero rather than being reset here - a read path
@@ -190,20 +193,23 @@ class Tenant
 
         if (!$project) return self::usage() + ['scope' => 'account'];
 
-        $custom  = ($project['quota_mode'] ?? 'account') === 'custom';
-        $account = self::usage();
+        $storageCustom   = ($project['storage_mode'] ?? 'account') === 'custom';
+        $bandwidthCustom = ($project['bandwidth_mode'] ?? 'account') === 'custom';
+        $account         = self::usage();
 
         return [
             'used'            => (int) $project['storage_used'],
             'bandwidth'       => ($project['bandwidth_period'] ?? null) === date('Y-m') ? (int) $project['bandwidth_used'] : 0,
 
-            # A project on the account's allowance shows the account's number:
-            # it is the ceiling it will actually hit, and showing a copy of it
-            # as though it were the project's own would say the account has one
-            # per project - which is exactly the thing that is not true.
-            'quota'           => $custom ? (int) $project['storage_quota'] : $account['quota'],
-            'bandwidth-quota' => $custom ? (int) $project['bandwidth_quota'] : $account['bandwidth-quota'],
-            'scope'           => $custom ? 'project' : 'shared',
+            # An axis on the account's allowance shows the account's number: it
+            # is the ceiling it will actually hit, and showing a copy of it as
+            # though it were the project's own would say the account has one per
+            # project - which is exactly the thing that is not true.
+            'quota'           => $storageCustom ? (int) $project['storage_quota'] : $account['quota'],
+            'bandwidth-quota' => $bandwidthCustom ? (int) $project['bandwidth_quota'] : $account['bandwidth-quota'],
+
+            'scope'           => $storageCustom ? 'project' : 'shared',
+            'bandwidth-scope' => $bandwidthCustom ? 'project' : 'shared',
         ];
     }
 

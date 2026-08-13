@@ -156,10 +156,10 @@ $sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M')
                         <b><?= $sentShare ?>%</b>
                     </div>
 
-                    <?php # Whose ceiling this one is, the same as the storage
-                          # bar above it says. ?>
-                    <?php if (($usage['scope'] ?? 'account') !== 'account') : ?>
-                        <div class="usage-note"><?= _l($usage['scope'] === 'project' ? 'cdn.projects.own-quota' : 'cdn.projects.account-wide') ?></div>
+                    <?php # Whose ceiling this one is - its own axis, since a
+                          # project can have its own disk and share the transfer. ?>
+                    <?php if (($usage['bandwidth-scope'] ?? 'account') !== 'account') : ?>
+                        <div class="usage-note"><?= _l($usage['bandwidth-scope'] === 'project' ? 'cdn.projects.own-quota' : 'cdn.projects.account-wide') ?></div>
                     <?php endif ?>
                 <?php endif ?>
             </div>

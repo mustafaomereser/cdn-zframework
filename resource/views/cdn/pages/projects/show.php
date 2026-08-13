@@ -15,9 +15,11 @@ $suspended = ($project['status'] ?? 'active') !== 'active';
 # A project given numbers of its own shows those, said as its own. Showing the
 # account's here meant an operator could raise one project to 50 GB and its
 # owner would still be looking at the account's 5.
-$custom = ($project['quota_mode'] ?? 'account') === 'custom';
-$quota  = $custom ? (int) $project['storage_quota'] : (int) $usage['quota'];
-$share  = $quota > 0 ? min(100, round($project['storage_used'] / $quota * 100)) : 0;
+$custom     = ($project['storage_mode'] ?? 'account') === 'custom';
+$sentCustom = ($project['bandwidth_mode'] ?? 'account') === 'custom';
+$quota      = $custom ? (int) $project['storage_quota'] : (int) $usage['quota'];
+$share      = $quota > 0 ? min(100, round($project['storage_used'] / $quota * 100)) : 0;
+$sentQuota  = $sentCustom ? (int) $project['bandwidth_quota'] : (int) $usage['bandwidth-quota'];
 ?>
 
 <?php if ($suspended) : ?>
@@ -56,9 +58,10 @@ $share  = $quota > 0 ? min(100, round($project['storage_used'] / $quota * 100)) 
             <div class="value notranslate" translate="no">{{ File::humanFileSize($month) }}</div>
             <div class="hint">
                 <span class="notranslate" translate="no"><?= date('Y-m') ?></span>
-                <?php if (($custom ? (int) $project['bandwidth_quota'] : (int) $usage['bandwidth-quota']) > 0) : ?>
+                <?php if ($sentQuota > 0) : ?>
                     · <?= _l('cdn.common.of') ?>
-                    <span class="notranslate" translate="no"><?= File::humanFileSize($custom ? (int) $project['bandwidth_quota'] : (int) $usage['bandwidth-quota']) ?></span>
+                    <span class="notranslate" translate="no"><?= File::humanFileSize($sentQuota) ?></span>
+                    — <?= _l($sentCustom ? 'cdn.projects.own-quota' : 'cdn.projects.account-wide') ?>
                 <?php endif ?>
             </div>
         </div>

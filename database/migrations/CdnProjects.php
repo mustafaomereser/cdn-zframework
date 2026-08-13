@@ -39,7 +39,7 @@ class CdnProjects
             # path has this row in hand and nothing else. quota_mode says where
             # the copy comes from:
             #
-            #   account  the owner's numbers, rewritten whenever those change.
+            #   account  the owner's number, rewritten whenever that changes.
             #   custom   this project's own, set by an operator and left alone
             #            by an account-level change.
             #
@@ -48,7 +48,12 @@ class CdnProjects
             # next account-level edit would silently take it away.
             'storage_quota'    => ['bigint', 'default:0'],
             'bandwidth_quota'  => ['bigint', 'default:0'],
-            'quota_mode'       => ['varchar:10', 'default:account'],
+
+            # One flag each, because they are separate decisions: a project can
+            # be given its own disk allowance while still sharing the account's
+            # transfer, and the other way round.
+            'storage_mode'     => ['varchar:10', 'default:account'],
+            'bandwidth_mode'   => ['varchar:10', 'default:account'],
 
             # Maintained by the delivery path rather than recomputed: counting
             # every object on every request is not something a CDN can afford.

@@ -39,6 +39,8 @@ return [
         'account-actions' => 'Hesap',
         'project-actions' => 'Proje',
         'delete-account'  => 'Hesabı ve dosyalarını sil',
+        'own-storage'     => 'Bu projeye özel depolama kotası',
+        'own-bandwidth'   => 'Bu projeye özel trafik kotası',
         'custom-quota'    => 'Bu projeye özel kota',
         'custom-quota-help' => 'Kapalıyken {user} hesabını takip eder ve hesabın alanı değişince yeniden yazılır. Açıkken bu rakamlarda kalır.',
         'is-suspended-user'    => 'Bu hesap askıya alınmış.',

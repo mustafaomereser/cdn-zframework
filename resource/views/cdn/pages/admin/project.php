@@ -7,7 +7,8 @@
 
 <?php
 $suspended = ($project['status'] ?? 'active') !== 'active';
-$custom    = ($project['quota_mode'] ?? 'account') === 'custom';
+$storageCustom   = ($project['storage_mode'] ?? 'account') === 'custom';
+$bandwidthCustom = ($project['bandwidth_mode'] ?? 'account') === 'custom';
 $month     = ($project['bandwidth_period'] ?? null) === date('Y-m') ? (int) $project['bandwidth_used'] : 0;
 
 $split = function (int $bytes) use ($units): array {
@@ -147,23 +148,24 @@ $split = function (int $bytes) use ($units): array {
                 <form method="POST" action="{{ route('cdn-admin.operator.projects.quota', ['id' => $project['id']]) }}">
                     <?= csrf() ?>
 
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="custom" value="1"
-                               id="custom-<?= $project['id'] ?>" <?= $custom ? 'checked' : '' ?>
-                               data-toggle-fields="#quota-fields-<?= $project['id'] ?>">
-                        <label class="form-check-label small" for="custom-<?= $project['id'] ?>">
-                            <b>{{ _l('cdn.operator.custom-quota') }}</b>
-                            <div class="hint">
-                                <?= _l('cdn.operator.custom-quota-help', [
-                                    'user' => e((string) ($owner['username'] ?? '—'), false),
-                                ]) ?>
-                            </div>
+                    <p class="hint">
+                        <?= _l('cdn.operator.custom-quota-help', ['user' => e((string) ($owner['username'] ?? '—'), false)]) ?>
+                    </p>
+
+                    <?php # Two decisions, not one: a project can have its own
+                          # disk allowance and still share the account's
+                          # transfer. ?>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="checkbox" name="storage-custom" value="1"
+                               id="storage-custom-<?= $project['id'] ?>" <?= $storageCustom ? 'checked' : '' ?>
+                               data-toggle-fields="#storage-fields-<?= $project['id'] ?>">
+                        <label class="form-check-label small" for="storage-custom-<?= $project['id'] ?>">
+                            <b>{{ _l('cdn.operator.own-storage') }}</b>
                         </label>
                     </div>
 
-                    <div id="quota-fields-<?= $project['id'] ?>" class="<?= $custom ? '' : 'd-none' ?>">
-                        <label class="form-label small mb-1">{{ _l('cdn.operator.storage-quota') }}</label>
-                        <div class="input-group input-group-sm mb-2">
+                    <div id="storage-fields-<?= $project['id'] ?>" class="<?= $storageCustom ? '' : 'd-none' ?> mb-3">
+                        <div class="input-group input-group-sm">
                             <input name="storage" class="form-control" value="<?= $storageAmount ?>" inputmode="decimal">
                             <select name="storage-unit" class="form-select" style="max-width: 92px" data-plain>
                                 <?php foreach (array_keys($units) as $unit) : ?>
@@ -171,9 +173,19 @@ $split = function (int $bytes) use ($units): array {
                                 <?php endforeach ?>
                             </select>
                         </div>
+                    </div>
 
-                        <label class="form-label small mb-1">{{ _l('cdn.operator.bandwidth-quota') }}</label>
-                        <div class="input-group input-group-sm mb-2">
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="checkbox" name="bandwidth-custom" value="1"
+                               id="bandwidth-custom-<?= $project['id'] ?>" <?= $bandwidthCustom ? 'checked' : '' ?>
+                               data-toggle-fields="#bandwidth-fields-<?= $project['id'] ?>">
+                        <label class="form-check-label small" for="bandwidth-custom-<?= $project['id'] ?>">
+                            <b>{{ _l('cdn.operator.own-bandwidth') }}</b>
+                        </label>
+                    </div>
+
+                    <div id="bandwidth-fields-<?= $project['id'] ?>" class="<?= $bandwidthCustom ? '' : 'd-none' ?> mb-2">
+                        <div class="input-group input-group-sm">
                             <input name="bandwidth" class="form-control" value="<?= $bandwidthAmount ?>" inputmode="decimal">
                             <select name="bandwidth-unit" class="form-select" style="max-width: 92px" data-plain>
                                 <?php foreach (array_keys($units) as $unit) : ?>

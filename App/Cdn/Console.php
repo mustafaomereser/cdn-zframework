@@ -294,6 +294,27 @@ class Console
         $orphans = (int) ($db->prepare("SELECT COUNT(*) AS count FROM cdn_objects WHERE refs <= 0")->fetch(\PDO::FETCH_ASSOC)['count'] ?? 0);
 
         Terminal::text('[color=green]Counters recomputed.[/color] ' . ($orphans ? "[color=yellow]$orphans object(s) now unreferenced - `php cdn gc` will collect them.[/color]" : ''));
+
+        # A project used to carry one flag for both quotas; it is two now, one
+        # per axis. Where the flag is at its default and the number is not the
+        # owner's, the number was deliberate - somebody set it - so the flag is
+        # set to match rather than leaving a quota that the next account-level
+        # edit would silently take away.
+        $db->prepare("UPDATE cdn_projects p
+                        JOIN users u ON u.id = p.owner_id
+                         SET p.storage_mode = 'custom'
+                       WHERE p.storage_mode = 'account' AND p.storage_quota <> u.storage_quota");
+
+        $db->prepare("UPDATE cdn_projects p
+                        JOIN users u ON u.id = p.owner_id
+                         SET p.bandwidth_mode = 'custom'
+                       WHERE p.bandwidth_mode = 'account' AND p.bandwidth_quota <> u.bandwidth_quota");
+
+        $adopted = (int) ($db->prepare(
+            "SELECT COUNT(*) AS count FROM cdn_projects WHERE storage_mode = 'custom' OR bandwidth_mode = 'custom'"
+        )->fetch(\PDO::FETCH_ASSOC)['count'] ?? 0);
+
+        if ($adopted) Terminal::text("[color=dark-gray]$adopted project(s) hold a quota of their own.[/color]");
     }
 
     /**

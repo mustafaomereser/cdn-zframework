@@ -46,7 +46,8 @@ $prefix = rtrim((string) config('cdn.delivery.url-prefix'), '/');
             <tbody>
                 <?php foreach ($rows['items'] as $project) :
                     $suspended = ($project['status'] ?? 'active') !== 'active';
-                    $custom    = ($project['quota_mode'] ?? 'account') === 'custom';
+                    $storageCustom   = ($project['storage_mode'] ?? 'account') === 'custom';
+                    $bandwidthCustom = ($project['bandwidth_mode'] ?? 'account') === 'custom';
                     $month     = ($project['bandwidth_period'] ?? null) === date('Y-m') ? (int) $project['bandwidth_used'] : 0;
                     $share     = $project['storage_quota'] > 0
                         ? min(100, round($project['storage_used'] / $project['storage_quota'] * 100))
@@ -87,7 +88,7 @@ $prefix = rtrim((string) config('cdn.delivery.url-prefix'), '/');
                                 </div>
                             <?php endif ?>
 
-                            <?php if ($custom) : ?>
+                            <?php if ($storageCustom) : ?>
                                 <div class="hint"><?= _l('cdn.projects.own-quota') ?></div>
                             <?php endif ?>
                         </td>
@@ -103,6 +104,10 @@ $prefix = rtrim((string) config('cdn.delivery.url-prefix'), '/');
                                 </div>
                             <?php else : ?>
                                 <div class="hint">{{ _l('cdn.operator.unlimited') }}</div>
+                            <?php endif ?>
+
+                            <?php if ($bandwidthCustom) : ?>
+                                <div class="hint"><?= _l('cdn.projects.own-quota') ?></div>
                             <?php endif ?>
                         </td>
 

@@ -39,6 +39,8 @@ return [
         'account-actions' => 'Account',
         'project-actions' => 'Project',
         'delete-account'  => 'Delete account and files',
+        'own-storage'     => 'A storage quota just for this project',
+        'own-bandwidth'   => 'A transfer quota just for this project',
         'custom-quota'    => 'A quota just for this project',
         'custom-quota-help' => 'Off, it follows {user} and is rewritten when their allowance changes. On, it keeps these numbers.',
         'is-suspended-user'    => 'This account is suspended.',

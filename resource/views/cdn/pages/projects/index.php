@@ -66,7 +66,7 @@ $share = $usage['quota'] > 0 ? min(100, round($usage['used'] / $usage['quota'] *
             <?php # A project with its own quota is measured against that and is
                   # not part of this bar - said here, where the difference would
                   # otherwise look like the numbers not adding up. ?>
-            <?php if (count(array_filter($rows, fn($row) => $row['own-quota']))) : ?>
+            <?php if (count(array_filter($rows, fn($row) => $row['own-quota'] || $row['own-sent-quota']))) : ?>
                 {{ _l('cdn.projects.own-quota-note') }}
             <?php endif ?>
         </div>
@@ -113,8 +113,8 @@ $share = $usage['quota'] > 0 ? min(100, round($usage['used'] / $usage['quota'] *
                         <span class="notranslate" translate="no"><b>{{ File::humanFileSize($row['used']) }}</b></span>
                         <span class="notranslate" translate="no">
                             <i class="bi bi-arrow-down-up"></i> {{ File::humanFileSize($row['month']) }}
-                            <?php if ((int) $row['bandwidth_quota'] > 0) : ?>
-                                <span class="hint">/ {{ File::humanFileSize((int) $row['bandwidth_quota']) }}</span>
+                            <?php if ((int) $row['sent-quota'] > 0) : ?>
+                                <span class="hint">/ {{ File::humanFileSize((int) $row['sent-quota']) }}</span>
                             <?php endif ?>
                         </span>
                     </div>

@@ -506,7 +506,8 @@ class AdminController
         foreach ($projects as $index => $project) {
             $own = array_values(array_filter($buckets, fn($bucket) => (int) $bucket['project_id'] === (int) $project['id']));
 
-            $custom = ($project['quota_mode'] ?? 'account') === 'custom';
+            $storageCustom   = ($project['storage_mode'] ?? 'account') === 'custom';
+            $bandwidthCustom = ($project['bandwidth_mode'] ?? 'account') === 'custom';
 
             $rows[] = $project + [
                 'buckets'   => $own,
@@ -514,9 +515,13 @@ class AdminController
                 'used'      => (int) $project['storage_used'],
                 'month'     => ($project['bandwidth_period'] ?? null) === $month ? (int) $project['bandwidth_used'] : 0,
 
-                # The ceiling this one will actually hit, and whose it is.
-                'quota'     => $custom ? (int) $project['storage_quota'] : (int) $usage['quota'],
-                'own-quota' => $custom,
+                # The ceiling this one will actually hit, and whose it is -
+                # per axis, since a project can have its own disk and share the
+                # account's transfer.
+                'quota'           => $storageCustom ? (int) $project['storage_quota'] : (int) $usage['quota'],
+                'own-quota'       => $storageCustom,
+                'sent-quota'      => $bandwidthCustom ? (int) $project['bandwidth_quota'] : (int) $usage['bandwidth-quota'],
+                'own-sent-quota'  => $bandwidthCustom,
 
                 # The first is the account's namespace: it cannot be renamed or
                 # deleted, and saying so here saves opening it to find out.

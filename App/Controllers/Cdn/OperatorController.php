@@ -177,12 +177,12 @@ class OperatorController
     public function projectQuota(string $id): mixed
     {
         $project = Operator::project($id);
-        $custom  = (bool) request('custom');
 
         Operator::projectQuota(
             $project,
-            $custom,
+            (bool) request('storage-custom'),
             Operator::bytes(request('storage'), request('storage-unit')),
+            (bool) request('bandwidth-custom'),
             Operator::bytes(request('bandwidth'), request('bandwidth-unit'))
         );
 

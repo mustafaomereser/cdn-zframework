@@ -84,16 +84,21 @@ class Operator
 
             $user['projects'] = $own;
 
-            # Against the account's allowance, so a project with its own numbers
+            # Against the account's allowance, so a project with its own number
             # is left out of it - it is measured against its own ceiling, and
             # counting it twice is how an account with a 50 GB project watches
-            # its own 5 GB fill up with bytes nobody charged to it.
-            $shared = array_values(array_filter($own, fn($p) => ($p['quota_mode'] ?? 'account') !== 'custom'));
+            # its own 5 GB fill up with bytes nobody charged to it. Per axis,
+            # because a project can have its own disk and share the transfer.
+            $user['storage'] = array_sum(array_map(
+                fn($p) => ($p['storage_mode'] ?? 'account') === 'custom' ? 0 : (int) $p['storage_used'],
+                $own
+            ));
 
-            $user['storage']   = array_sum(array_map(fn($p) => (int) $p['storage_used'], $shared));
             $user['bandwidth'] = array_sum(array_map(
-                fn($p) => ($p['bandwidth_period'] ?? null) === date('Y-m') ? (int) $p['bandwidth_used'] : 0,
-                $shared
+                fn($p) => ($p['bandwidth_mode'] ?? 'account') === 'custom' || ($p['bandwidth_period'] ?? null) !== date('Y-m')
+                    ? 0
+                    : (int) $p['bandwidth_used'],
+                $own
             ));
 
             # What the account holds in total is a different number, and an
@@ -317,15 +322,18 @@ class Operator
         ]);
 
         foreach ((new Projects)->where('owner_id', $user['id'])->closureMode(false)->get() as $project) {
-            # A project an operator gave its own numbers keeps them. Rewriting
+            # A project an operator gave its own number keeps it. Rewriting
             # those here is how a deliberate 50 GB quietly becomes the account's
-            # 5 the next time somebody touches the account.
-            if (($project['quota_mode'] ?? 'account') === 'custom') continue;
+            # 5 the next time somebody touches the account. The two are separate
+            # decisions, so they are checked separately.
+            $write = [];
 
-            (new Projects)->where('id', $project['id'])->update([
-                'storage_quota'   => $storage,
-                'bandwidth_quota' => $bandwidth,
-            ]);
+            if (($project['storage_mode'] ?? 'account') !== 'custom')   $write['storage_quota']   = $storage;
+            if (($project['bandwidth_mode'] ?? 'account') !== 'custom') $write['bandwidth_quota'] = $bandwidth;
+
+            if (!count($write)) continue;
+
+            (new Projects)->where('id', $project['id'])->update($write);
 
             # Otherwise a raised quota is not felt by the person who was refused
             # until registry-ttl expires.
@@ -351,17 +359,18 @@ class Operator
      * @param int   $bandwidth
      * @return void
      */
-    public static function projectQuota(array $project, bool $custom, int $storage, int $bandwidth): void
+    public static function projectQuota(array $project, bool $storageCustom, int $storage, bool $bandwidthCustom, int $bandwidth): void
     {
-        if (!$custom) {
-            $owner = (new User)->closureMode(false)->where('id', (int) $project['owner_id'])->first() ?: [];
+        # Whichever axis goes back to the account takes the account's number
+        # with it, so the row the delivery path reads is right immediately.
+        $owner = (new User)->closureMode(false)->where('id', (int) $project['owner_id'])->first() ?: [];
 
-            $storage   = (int) ($owner['storage_quota'] ?? 0);
-            $bandwidth = (int) ($owner['bandwidth_quota'] ?? 0);
-        }
+        if (!$storageCustom)   $storage   = (int) ($owner['storage_quota'] ?? 0);
+        if (!$bandwidthCustom) $bandwidth = (int) ($owner['bandwidth_quota'] ?? 0);
 
         (new Projects)->where('id', $project['id'])->update([
-            'quota_mode'      => $custom ? 'custom' : 'account',
+            'storage_mode'    => $storageCustom ? 'custom' : 'account',
+            'bandwidth_mode'  => $bandwidthCustom ? 'custom' : 'account',
             'storage_quota'   => max(0, $storage),
             'bandwidth_quota' => max(0, $bandwidth),
         ]);
@@ -369,9 +378,10 @@ class Operator
         Registry::forgetProject((int) $project['id']);
 
         self::audit('quota', 'project', $project, [
-            'mode'      => $custom ? 'custom' : 'account',
-            'storage'   => [(int) $project['storage_quota'], max(0, $storage)],
-            'bandwidth' => [(int) $project['bandwidth_quota'], max(0, $bandwidth)],
+            'storage-mode'   => $storageCustom ? 'custom' : 'account',
+            'bandwidth-mode' => $bandwidthCustom ? 'custom' : 'account',
+            'storage'        => [(int) $project['storage_quota'], max(0, $storage)],
+            'bandwidth'      => [(int) $project['bandwidth_quota'], max(0, $bandwidth)],
         ]);
     }
 
