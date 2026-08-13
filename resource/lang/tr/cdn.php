@@ -182,6 +182,8 @@ return [
         'delete-lede'    => "Bucket'ları, dosyaları ve anahtarları da gider. Baytlar toplayıcı için serbest bırakılır.",
         'delete-action'  => '{files} dosyayla birlikte sil',
         'delete-confirm' => '{name} ve {files} dosyası silinsin mi? Adreslerini kullanan her sayfa bozulur. Geri alınamaz.',
+        'main-fixed'     => 'Bu senin ana projen. Adı, adreslerinin ad alanı ve diğer projelerin adı ondan türüyor; o yüzden olduğu gibi kalıyor.',
+        'delete-main'    => 'Bu senin ana projen — URL adı senin ad alanın olduğu için silinemez. Diğer projeler silinebilir.',
         'delete-last'    => 'Tek projen bu, o yüzden silinemez — projesi olmayan bir hesap hiçbir şey saklayamaz.',
         'suspended-title' => 'Bu proje askıya alındı.',
         'suspended-text'  => 'Adresleri 403 dönüyor ve yeni dosya yüklenemiyor. Dosyalarına dokunulmadı, proje geri açıldığı an geri gelirler. Sebebini bu kurulumun işletmecisine sor.',
@@ -314,6 +316,8 @@ return [
     ],
 
     'buckets' => [
+        'add'        => 'Yeni bucket',
+        'visibility' => 'Kim açabilir',
         'title'   => "Bucket'lar",
         'lede'    => "Bucket, kuralları olan bir klasör. Adı, adresin proje adından sonraki parçası.",
         'new'     => 'Yeni bucket',
@@ -492,6 +496,7 @@ return [
     ],
 
     'alerts' => [
+        'project-main'    => 'Bu senin ana projen — adı, adreslerinin ad alanı olduğu için silinemez ve yeniden adlandırılamaz.',
         'suspended'       => 'Bu hesap askıya alınmış.',
         'suspended-because' => 'Bu hesap askıya alındı: {reason}',
         'quota-saved'     => '{project} için kota kaydedildi.',

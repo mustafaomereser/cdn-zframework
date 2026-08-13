@@ -182,6 +182,8 @@ return [
         'delete-lede'    => 'The buckets, the files and the keys go with it. The bytes are released for the collector.',
         'delete-action'  => 'Delete, with {files} file(s)',
         'delete-confirm' => 'Delete {name} and its {files} file(s)? Any page using their URLs will break. This cannot be undone.',
+        'main-fixed'     => "This is your main project. Its name is your URL namespace and every other project's name is derived from it, so it stays as it is.",
+        'delete-main'    => 'This is your main project — its URL name is your namespace, so it cannot be deleted. Other projects can.',
         'delete-last'    => 'This is your only project, so it cannot be deleted — an account without one cannot store anything.',
         'suspended-title' => 'This project is suspended.',
         'suspended-text'  => 'Its URLs answer 403 and nothing new can be uploaded to it. Your files are untouched and come back the moment it is restored. Ask the operator of this installation why.',
@@ -314,6 +316,8 @@ return [
     ],
 
     'buckets' => [
+        'add'        => 'New bucket',
+        'visibility' => 'Who can open it',
         'title'   => 'Buckets',
         'lede'    => 'A bucket is a folder with rules. Its name is the part of the URL after your project.',
         'new'     => 'New bucket',
@@ -492,6 +496,7 @@ return [
     ],
 
     'alerts' => [
+        'project-main'    => 'This is your main project — its name is your URL namespace, so it cannot be deleted or renamed.',
         'suspended'       => 'This account is suspended.',
         'suspended-because' => 'This account is suspended: {reason}',
         'quota-saved'     => 'Quota saved for {project}.',

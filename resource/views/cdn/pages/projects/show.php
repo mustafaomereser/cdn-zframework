@@ -104,13 +104,20 @@
                 <h6>{{ _l('cdn.projects.rename') }}</h6>
                 <p class="hint">{{ _l('cdn.projects.rename-lede') }}</p>
 
-                <form action="{{ route('cdn-admin.projects.save', ['id' => $project['id']]) }}" method="POST">
-                    <?= csrf() ?>
-                    <div class="input-group input-group-sm" style="max-width: 420px">
-                        <input name="name" class="form-control" value="{{ $project['name'] }}" required>
-                        <button class="btn btn-outline-secondary">{{ _l('cdn.common.rename') }}</button>
-                    </div>
-                </form>
+                <?php # The main project's name is the account's namespace: it is
+                      # what every other project's url name is derived from, so
+                      # it is fixed in the same way its slug is. ?>
+                <?php if ($only) : ?>
+                    <div class="hint small">{{ _l('cdn.projects.main-fixed') }}</div>
+                <?php else : ?>
+                    <form action="{{ route('cdn-admin.projects.save', ['id' => $project['id']]) }}" method="POST">
+                        <?= csrf() ?>
+                        <div class="input-group input-group-sm" style="max-width: 420px">
+                            <input name="name" class="form-control" value="{{ $project['name'] }}" required>
+                            <button class="btn btn-outline-secondary">{{ _l('cdn.common.rename') }}</button>
+                        </div>
+                    </form>
+                <?php endif ?>
             </div>
         </div>
     </div>
@@ -125,7 +132,7 @@
                       # a project, and an account with none would be an account
                       # that cannot upload anything. ?>
                 <?php if ($only) : ?>
-                    <div class="hint small">{{ _l('cdn.projects.delete-last') }}</div>
+                    <div class="hint small">{{ _l('cdn.projects.delete-main') }}</div>
                 <?php else : ?>
                     <form action="{{ route('cdn-admin.projects.delete', ['id' => $project['id']]) }}" method="POST"
                           data-confirm="<?= e(_l('cdn.projects.delete-confirm', ['name' => $project['name'], 'files' => $files]), false) ?>">

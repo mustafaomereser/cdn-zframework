@@ -622,6 +622,16 @@ class AdminController
         $project = Tenant::project($id);
         $name    = trim((string) request('name'));
 
+        # The main project's name is the account's namespace: every other
+        # project's url name is derived from it, so it is as fixed as its slug.
+        # Hidden in the form and refused here, because a hidden form is a form
+        # somebody can still post to.
+        if ((int) Tenant::projects()[0]['id'] === (int) $project['id']) {
+            Flash::danger(_l('cdn.alerts.project-main'));
+
+            return back();
+        }
+
         $clash = (new Projects)->where('name', $name)->closureMode(false)->first();
         if ($clash && (int) $clash['id'] !== (int) $project['id']) {
             Flash::danger(_l('cdn.alerts.name-taken', ['name' => $name]));
@@ -663,21 +673,13 @@ class AdminController
      */
     private function reason(array $result): string
     {
-        return _l('cdn.upload-errors.' . ($result['error'] ?? 'unknown'))
-            ?? _l('cdn.upload-errors.unknown', ['error' => $result['error'] ?? 'unknown']);
+        $error = (string) ($result['error'] ?? 'unknown');
 
-        $message = match ($result['error'] ?? '') {
-            'extension-blocked'       => 'That file type cannot be uploaded - it is one that can execute on a server.',
-            'extension-not-allowed'   => 'This bucket does not accept that file type.',
-            'mime-not-allowed'        => 'This bucket does not accept that content type.',
-            'too-large'               => 'That file is too large.',
-            'storage-quota-exceeded'  => 'Your storage quota is full.',
-            'remote-disabled'         => 'Fetching by URL is turned off.',
-            'private-address'         => 'That URL points inside a private network.',
-            'invalid-path'            => 'That path is not usable.',
-            'already-exists'          => 'Something is already stored at that path.',
-            default                   => 'Upload failed (' . ($result['error'] ?? 'unknown') . ').',
-        };
+        # A missing key renders as nothing at all, so the fallback names the code
+        # rather than showing an empty toast for a failure nobody can then
+        # report.
+        $message = _l('cdn.upload-errors.' . $error)
+            ?: _l('cdn.upload-errors.unknown', ['error' => $error]);
 
         return $message . (isset($result['message']) ? ' ' . $result['message'] : '');
     }
