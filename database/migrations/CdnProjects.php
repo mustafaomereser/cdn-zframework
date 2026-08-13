@@ -20,7 +20,11 @@ class CdnProjects
     {
         return [
             'id'               => ['primary'],
-            'name'             => ['varchar:120', 'required'],
+
+            # Both unique across the installation. The slug has to be - it is a
+            # path segment - and the name follows it so that two projects a
+            # person has to choose between in a dropdown can never read the same.
+            'name'             => ['varchar:120', 'required', 'unique'],
             'slug'             => ['varchar:120', 'required', 'unique'],
             'status'           => ['varchar:20', 'default:active', 'index'],   # active | suspended
 

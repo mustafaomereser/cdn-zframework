@@ -22,11 +22,12 @@ $menu = [
     'cdn-admin.settings'  => ['icon' => 'bi-sliders',     'title' => 'Settings'],
 ];
 
-$current = uri();
-$project = Tenant::project();
+$current  = uri();
+$projects = Tenant::projects();
+$usage    = Tenant::usage();
 
-$used  = (int) $project['storage_used'];
-$quota = (int) $project['storage_quota'];
+$used  = $usage['used'];
+$quota = $usage['quota'];
 $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
 ?>
 <!DOCTYPE html>
@@ -51,7 +52,11 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
     <div class="d-flex">
         <nav class="sidebar">
             <div class="brand"><i class="bi bi-hdd-network"></i> {{ config('app.title') }}</div>
-            <div class="project truncate">{{ $project['name'] }}</div>
+            <div class="project truncate">
+                <?= count($projects) > 1
+                    ? count($projects) . ' projects'
+                    : e($projects[0]['name'], false) ?>
+            </div>
 
             <?php foreach ($menu as $route => $item) :
                 $path = parse_url(route($route), PHP_URL_PATH);

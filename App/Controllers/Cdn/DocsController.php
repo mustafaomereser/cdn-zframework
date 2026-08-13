@@ -39,6 +39,34 @@ class DocsController
             $language = isset(self::LANGUAGES[$current]) ? $current : 'en';
         }
 
+        return $this->render($language);
+    }
+
+    /**
+     * The project slug to write into the examples.
+     *
+     * A signed-in reader gets their own, so the urls on the page are urls that
+     * exist and can be pasted straight into a terminal. Everyone else gets a
+     * placeholder that reads as one.
+     *
+     * @param string $language
+     * @return string
+     */
+    private function projectSlug(string $language): string
+    {
+        if (!\zFramework\Core\Facades\Auth::check()) return $language === 'tr' ? 'projen' : 'your-project';
+
+        $projects = \App\Cdn\Tenant::projects();
+
+        return (string) ($projects[0]['slug'] ?? ($language === 'tr' ? 'projen' : 'your-project'));
+    }
+
+    /**
+     * @param string $language
+     * @return mixed
+     */
+    private function render(string $language): mixed
+    {
         return view('cdn.docs', [
             'language'  => $language,
             'languages' => self::LANGUAGES,
@@ -49,6 +77,10 @@ class DocsController
             'prefix'    => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
             'api'       => rtrim((string) Support::config('api.route', '/api/cdn'), '/') . '/v1',
             'panel'     => (string) Support::config('admin.route', '/panel'),
+
+            # And with the reader's own project name in them when there is one,
+            # so the urls in the examples are urls that exist.
+            'project'   => $this->projectSlug($language),
         ]);
     }
 }

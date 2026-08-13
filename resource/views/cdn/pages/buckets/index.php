@@ -29,7 +29,7 @@
                     <td>
                         <div class="fw-medium">{{ $bucket['name'] }}</div>
                         <div class="small text-secondary mono">
-                            {{ rtrim(config('cdn.delivery.url-prefix'), '/') }}/{{ $bucket['slug'] }}/…
+                            {{ rtrim(config('cdn.delivery.url-prefix'), '/') }}/{{ Tenant::projectOf($bucket)['slug'] }}/{{ $bucket['slug'] }}/…
                         </div>
                         @if($bucket['origin_url'])
                         <div class="small text-info mono">↳ {{ $bucket['origin_url'] }}</div>

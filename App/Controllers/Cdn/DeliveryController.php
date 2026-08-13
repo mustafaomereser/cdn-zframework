@@ -35,6 +35,7 @@ class DeliveryController
      * @return mixed
      */
     public function serve(
+        string $project,
         string $bucket,
         string $p1,
         ?string $p2 = null,
@@ -58,16 +59,16 @@ class DeliveryController
 
         if ($path === false) return $this->refuse(400, 'bad-path', null, null, (string) $bucket, $started);
 
-        $bucketRow = Registry::bucket($bucket);
+        $bucketRow = Registry::bucket($project, $bucket);
         if (!$bucketRow) return $this->refuse(404, 'unknown-bucket', null, null, $path, $started);
 
-        $project = Registry::project((int) $bucketRow['project_id']);
+        $projectRow = Registry::project((int) $bucketRow['project_id']);
 
-        # What the signature covers: the bucket and the path exactly as they
-        # appear in the URL.
-        $signedPath = strtolower(trim($bucket, '/')) . '/' . $path;
+        # What the signature covers: the project, the bucket and the path,
+        # exactly as they appear in the URL.
+        $signedPath = strtolower(trim($project, '/') . '/' . trim($bucket, '/')) . '/' . $path;
 
-        if ($refusal = Guard::delivery($bucketRow, $project, $signedPath)) {
+        if ($refusal = Guard::delivery($bucketRow, $projectRow, $signedPath)) {
             if (isset($refusal['retry-after'])) \zFramework\Core\Facades\Response::header('Retry-After', (string) $refusal['retry-after']);
             return $this->refuse($refusal['status'], $refusal['reason'], $bucketRow, null, $path, $started);
         }

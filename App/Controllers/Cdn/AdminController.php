@@ -16,6 +16,7 @@ use App\Models\Cdn\AccessLogs;
 use App\Models\Cdn\ApiKeys;
 use App\Models\Cdn\Buckets;
 use App\Models\Cdn\Files;
+use App\Models\Cdn\Projects;
 use App\Models\Cdn\Purges;
 use App\Models\Cdn\Variants;
 use zFramework\Core\Facades\Alerts;
@@ -27,14 +28,14 @@ use zFramework\Core\Validator;
 /**
  * The panel.
  *
- * Everything here is scoped to the signed-in user's project through Tenant,
- * which resolves ids rather than trusting them. A method that reads an id
- * straight out of the URL and hands it to findOrFail is a method that serves
- * somebody else's files, and there is no amount of menu-hiding that fixes it.
+ * Everything here is scoped through Tenant, which resolves ids rather than
+ * trusting them. A method that reads an id straight out of the URL and hands it
+ * to findOrFail is a method that serves somebody else's files, and there is no
+ * amount of menu-hiding that fixes it.
  *
- * Five pages, deliberately: Overview, Files, Buckets, Keys, Activity. The
- * things a person does daily - upload something, copy its URL - are on the
- * first one, so the rest can be as detailed as they need to be.
+ * A user may own several projects. The panel shows all of them together -
+ * files, keys and activity across the lot - and asks which one only where the
+ * answer changes something: creating a bucket, and issuing a key.
  */
 class AdminController
 {
@@ -46,11 +47,12 @@ class AdminController
      */
     public function dashboard(): mixed
     {
-        $project = Tenant::project();
-        $buckets = Tenant::buckets();
+        $projects = Tenant::projects();
+        $buckets  = Tenant::buckets();
+        $usage    = Tenant::usage();
 
         $files = (new Files)
-            ->where('project_id', $project['id'])
+            ->whereIn('project_id', Tenant::projectIds())
             ->orderBy(['id' => 'DESC'])
             ->limit(8)
             ->closureMode(false)
@@ -58,19 +60,29 @@ class AdminController
 
         # Today comes from the log rather than the rollup, which runs overnight.
         # Without this the dashboard looks dead every morning.
+        $ids   = implode(',', Tenant::projectIds()) ?: '0';
         $today = (new DB)->prepare(
             "SELECT COUNT(*) AS requests, COALESCE(SUM(bytes * weight), 0) AS bytes,
                     SUM(IF(cache = 'hit', 1, 0)) AS hits, SUM(IF(status >= 400, 1, 0)) AS errors
-               FROM cdn_access_logs WHERE project_id = :project AND created_at >= :from",
-            ['project' => $project['id'], 'from' => date('Y-m-d') . ' 00:00:00']
+               FROM cdn_access_logs WHERE project_id IN ($ids) AND created_at >= :from",
+            ['from' => date('Y-m-d') . ' 00:00:00']
         )->fetch(\PDO::FETCH_ASSOC) ?: [];
 
-        $series = Metrics::series(null, 30, (int) $project['id']);
+        $series = [];
+        foreach (Tenant::projectIds() as $id) {
+            foreach (Metrics::series(null, 30, $id) as $day) {
+                $series[$day['date']] ??= ['date' => $day['date'], 'requests' => 0, 'bytes' => 0, 'hits' => 0, 'misses' => 0, 'errors' => 0];
+                foreach (['requests', 'bytes', 'hits', 'misses', 'errors'] as $column) $series[$day['date']][$column] += (int) $day[$column];
+            }
+        }
+
+        ksort($series);
+        $series = array_values($series);
 
         $totals = ['requests' => 0, 'bytes' => 0, 'hits' => 0, 'misses' => 0];
         foreach ($series as $day) foreach ($totals as $key => $value) $totals[$key] += (int) $day[$key];
 
-        return view('cdn.pages.dashboard', compact('project', 'buckets', 'files', 'today', 'series', 'totals'));
+        return view('cdn.pages.dashboard', compact('projects', 'buckets', 'files', 'today', 'series', 'totals', 'usage'));
     }
 
     #region Files
@@ -79,19 +91,18 @@ class AdminController
      */
     public function files(): mixed
     {
-        $project = Tenant::project();
         $buckets = Tenant::buckets();
 
-        $query = (new Files)->where('project_id', $project['id'])->closureMode(false);
+        $query = (new Files)->whereIn('project_id', Tenant::projectIds())->closureMode(false);
 
-        # The bucket filter is checked against this user's buckets, not taken as
-        # given - otherwise it is a way to read another project's file list.
+        # The bucket filter is resolved through Tenant, not taken as given -
+        # otherwise it is a way to read another project's file list.
         if ($bucket = request('bucket')) $query->where('bucket_id', (int) Tenant::bucket((int) $bucket)['id']);
         if ($search = request('q'))      $query->where('path', 'LIKE', '%' . $search . '%');
 
         $files = $query->orderBy(['id' => 'DESC'])->paginate(30);
 
-        return view('cdn.pages.files.index', compact('files', 'buckets', 'project'));
+        return view('cdn.pages.files.index', compact('files', 'buckets'));
     }
 
     /**
@@ -107,6 +118,7 @@ class AdminController
         return view('cdn.pages.files.show', [
             'file'     => $file,
             'bucket'   => $bucket,
+            'project'  => Tenant::projectOf($bucket),
             'variants' => $variants,
             'url'      => $this->url($bucket, $file['path']),
         ]);
@@ -143,7 +155,7 @@ class AdminController
             return back();
         }
 
-        Registry::forgetBucket($bucket['slug']);
+        Registry::forgetBucket($bucket);
 
         $done = array_values(array_filter($results, fn($result) => $result['ok']));
 
@@ -178,7 +190,10 @@ class AdminController
      */
     public function buckets(): mixed
     {
-        return view('cdn.pages.buckets.index', ['buckets' => Tenant::buckets(), 'project' => Tenant::project()]);
+        return view('cdn.pages.buckets.index', [
+            'buckets'  => Tenant::buckets(),
+            'projects' => Tenant::projects(),
+        ]);
     }
 
     /**
@@ -187,7 +202,10 @@ class AdminController
      */
     public function bucketForm(?string $id = null): mixed
     {
-        return view('cdn.pages.buckets.form', ['bucket' => $id ? Tenant::bucket($id) : []]);
+        return view('cdn.pages.buckets.form', [
+            'bucket'   => $id ? Tenant::bucket($id) : [],
+            'projects' => Tenant::projects(),
+        ]);
     }
 
     /**
@@ -195,24 +213,31 @@ class AdminController
      */
     public function bucketSave(): mixed
     {
-        $project = Tenant::project();
-        $model   = new Buckets;
-        $id      = request('id');
+        $model = new Buckets;
+        $id    = request('id');
 
         Validator::validate($_REQUEST, [
             'name' => ['required', 'max:120'],
             'slug' => ['required', 'max:120'],
         ]);
 
-        $slug     = \zFramework\Core\Facades\Str::slug((string) request('slug'));
         $existing = $id ? Tenant::bucket($id) : null;
 
-        # Globally unique, across every project: the slug is the first path
-        # segment of every public url, so a collision reroutes somebody else's
-        # traffic. Checked without a project filter for exactly that reason.
-        $clash = $model->where('slug', $slug)->closureMode(false)->first();
+        # Resolved through Tenant so a posted project id that is not this user's
+        # is a 404 rather than a bucket in somebody else's namespace. An existing
+        # bucket keeps its project: moving one would change every url it serves,
+        # which is a different operation than editing its settings.
+        $project = $existing ? Tenant::projectOf($existing) : Tenant::project(request('project'));
+
+        $slug = \zFramework\Core\Facades\Str::slug((string) request('slug'));
+
+        # Unique within the project only. The url carries the project as its own
+        # segment, so two accounts can both have "photos" and neither has to
+        # accept a name with a random suffix on the end.
+        $clash = $model->where('project_id', $project['id'])->where('slug', $slug)->closureMode(false)->first();
+
         if ($clash && (!$existing || (int) $clash['id'] !== (int) $existing['id'])) {
-            Alerts::danger("`$slug` is already taken - try another.");
+            Alerts::danger("`$slug` is already used in {$project['name']} — pick another name.");
             return back();
         }
 
@@ -239,8 +264,12 @@ class AdminController
 
         if ($existing) {
             $model->where('id', $existing['id'])->update($columns);
-            Registry::forgetBucket($existing['slug']);
-            Registry::forgetBucket($slug);
+
+            # Both keys: the cached row is found under the old slug, and the new
+            # one must not answer from a copy made before the rename.
+            Registry::forgetBucket($existing);
+            Registry::forgetBucket(['project_id' => $project['id'], 'slug' => $slug]);
+
             Alerts::success('Bucket saved.');
         } else {
             $model->insert($columns + [
@@ -249,7 +278,8 @@ class AdminController
                 # later without touching the others.
                 'signing_key' => Support::token(24),
             ]);
-            Alerts::success('Bucket created.');
+
+            Alerts::success('Bucket created at /' . $project['slug'] . '/' . $slug . '.');
         }
 
         return redirect(route('cdn-admin.buckets'));
@@ -271,7 +301,7 @@ class AdminController
 
         Purger::bucket($bucket, 'panel:' . Auth::id());
         (new Buckets)->where('id', $bucket['id'])->delete();
-        Registry::forgetBucket($bucket['slug']);
+        Registry::forgetBucket($bucket);
 
         Alerts::success('Bucket deleted, with ' . count($files) . ' file(s).');
 
@@ -298,8 +328,6 @@ class AdminController
      */
     public function keys(): mixed
     {
-        $project = Tenant::project();
-
         # Shown once, on the redirect after creation, then dropped. Not
         # JustOneTime: every request ends by clearing that store outright, so a
         # value written before a redirect is gone before the page that would
@@ -308,10 +336,10 @@ class AdminController
         if ($created) Session::delete('cdn-new-key');
 
         return view('cdn.pages.keys', [
-            'keys'    => (new ApiKeys)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'DESC'])->get(),
-            'buckets' => Tenant::buckets(),
-            'created' => $created,
-            'project' => $project,
+            'keys'     => (new ApiKeys)->whereIn('project_id', Tenant::projectIds())->closureMode(false)->orderBy(['id' => 'DESC'])->get(),
+            'buckets'  => Tenant::buckets(),
+            'projects' => Tenant::projects(),
+            'created'  => $created,
         ]);
     }
 
@@ -320,15 +348,16 @@ class AdminController
      */
     public function keyCreate(): mixed
     {
-        $project = Tenant::project();
-
         Validator::validate($_REQUEST, ['name' => ['required', 'max:120']]);
+
+        $project = Tenant::project(request('project'));
 
         $access = 'cdn_' . Support::token(12);
         $secret = Support::token(24);
 
-        # Only this project's buckets can be attached, whatever ids were posted.
-        $mine    = array_column(Tenant::buckets(), 'id');
+        # Only buckets from the chosen project can be attached, whatever ids
+        # were posted.
+        $mine    = array_column(Tenant::buckets((int) $project['id']), 'id');
         $buckets = array_values(array_intersect(array_map('intval', (array) (request('buckets') ?: [])), array_map('intval', $mine)));
 
         (new ApiKeys)->insert([
@@ -346,7 +375,7 @@ class AdminController
             'expires_at'  => request('expires_at') ?: null,
         ], just_insert: true);
 
-        Session::set('cdn-new-key', ['access' => $access, 'secret' => $secret]);
+        Session::set('cdn-new-key', ['access' => $access, 'secret' => $secret, 'project' => $project['name']]);
 
         return redirect(route('cdn-admin.keys'));
     }
@@ -357,7 +386,7 @@ class AdminController
      */
     public function keyRevoke(string $id): mixed
     {
-        $key = (new ApiKeys)->where('project_id', Tenant::projectId())->where('id', (int) $id)->closureMode(false)->first();
+        $key = (new ApiKeys)->whereIn('project_id', Tenant::projectIds())->where('id', (int) $id)->closureMode(false)->first();
         if (!$key) abort(404);
 
         (new ApiKeys)->where('id', $key['id'])->update(['status' => 'revoked']);
@@ -370,17 +399,11 @@ class AdminController
     /**
      * Activity: what was served, and what was cleared.
      *
-     * The two used to be separate pages. They answer the same question - "what
-     * happened, and why does the site look like this" - so they are one page
-     * with two tabs.
-     *
      * @return mixed
      */
     public function activity(): mixed
     {
-        $project = Tenant::project();
-
-        $query = (new AccessLogs)->where('project_id', $project['id'])->closureMode(false);
+        $query = (new AccessLogs)->whereIn('project_id', Tenant::projectIds())->closureMode(false);
 
         if ($bucket = request('bucket')) $query->where('bucket_id', (int) Tenant::bucket((int) $bucket)['id']);
         if ($cache = request('cache'))   $query->where('cache', (string) $cache);
@@ -388,25 +411,20 @@ class AdminController
 
         return view('cdn.pages.activity', [
             'logs'    => $query->orderBy(['id' => 'DESC'])->paginate(40),
-            'purges'  => (new Purges)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'DESC'])->limit(30)->get(),
+            'purges'  => (new Purges)->whereIn('project_id', Tenant::projectIds())->closureMode(false)->orderBy(['id' => 'DESC'])->limit(30)->get(),
             'buckets' => Tenant::buckets(),
         ]);
     }
 
+    #region Settings
     /**
-     * Settings: the project, and - for an operator - the installation.
-     *
-     * The second half is the useful one to an operator: `transform.formats`
-     * listing avif means nothing if this build of PHP cannot write it, and that
-     * mismatch is otherwise only discovered as an image that silently never
-     * converts.
+     * Settings: the projects, and - for an operator - the installation.
      *
      * @return mixed
      */
     public function settings(): mixed
     {
-        $project = Tenant::project();
-        $system  = null;
+        $system = null;
 
         if (Tenant::isOperator()) {
             $disks = [];
@@ -431,27 +449,76 @@ class AdminController
                 ],
                 'disks'    => $disks,
                 'variants' => Storage::measure(Storage::variantRoot()),
-                'projects' => (new \App\Models\Cdn\Projects)->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get(),
+                'projects' => (new Projects)->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get(),
             ];
         }
 
-        return view('cdn.pages.settings', compact('project', 'system'));
+        return view('cdn.pages.settings', [
+            'projects' => Tenant::projects(),
+            'system'   => $system,
+        ]);
     }
 
     /**
-     * Rename the project.
+     * Add a project.
+     *
+     * A second project is a second namespace in the url, which is the reason to
+     * want one: separating a staging site's assets from a live one's, or one
+     * client's from another's.
      *
      * @return mixed
      */
-    public function settingsSave(): mixed
+    public function projectCreate(): mixed
     {
         Validator::validate($_REQUEST, ['name' => ['required', 'max:120']]);
 
-        (new \App\Models\Cdn\Projects)->where('id', Tenant::projectId())->update(['name' => request('name')]);
+        $name = trim((string) request('name'));
+
+        # Names are unique across the installation, so a person choosing between
+        # two of them in a dropdown never sees the same label twice. Said out
+        # loud rather than silently suffixed - the name is theirs to pick.
+        if ((new Projects)->where('name', $name)->closureMode(false)->first()) {
+            Alerts::danger("`$name` is already taken — try another name.");
+            return back();
+        }
+
+        $project = Tenant::create(Auth::user() ?: [], $name);
+
+        Alerts::success("Project created. Its files are served from /{$project['slug']}/.");
+
+        return redirect(route('cdn-admin.settings'));
+    }
+
+    /**
+     * Rename a project.
+     *
+     * The slug is not touched: it is in every URL the project has ever served,
+     * and a rename is not meant to break them.
+     *
+     * @param string $id
+     * @return mixed
+     */
+    public function projectSave(string $id): mixed
+    {
+        Validator::validate($_REQUEST, ['name' => ['required', 'max:120']]);
+
+        $project = Tenant::project($id);
+        $name    = trim((string) request('name'));
+
+        $clash = (new Projects)->where('name', $name)->closureMode(false)->first();
+        if ($clash && (int) $clash['id'] !== (int) $project['id']) {
+            Alerts::danger("`$name` is already taken — try another name.");
+            return back();
+        }
+
+        (new Projects)->where('id', $project['id'])->update(['name' => $name]);
+        Registry::forgetProject((int) $project['id']);
+
         Alerts::success('Saved.');
 
         return back();
     }
+    #endregion
 
     /**
      * A servable url for a file, signed when the bucket needs it.
@@ -462,10 +529,13 @@ class AdminController
      */
     private function url(array $bucket, string $path): string
     {
-        if (($bucket['visibility'] ?? 'public') === 'public')
-            return host() . rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/') . '/' . $bucket['slug'] . '/' . $path;
+        $project = Tenant::projectOf($bucket);
 
-        return Signature::url($bucket['slug'], $path, ['bucket' => $bucket, 'ttl' => 3600]);
+        if (($bucket['visibility'] ?? 'public') === 'public')
+            return host() . rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/')
+                . '/' . $project['slug'] . '/' . $bucket['slug'] . '/' . $path;
+
+        return Signature::url($project['slug'], $bucket['slug'], $path, ['bucket' => $bucket, 'ttl' => 3600]);
     }
 
     /**

@@ -34,11 +34,15 @@
 <section id="urls">
     <h2>URLs</h2>
 
-    <pre><code><?= $host . $prefix ?>/&lt;bucket&gt;/&lt;path&gt;</code></pre>
+    <pre><code><?= $host . $prefix ?>/&lt;project&gt;/&lt;bucket&gt;/&lt;path&gt;</code></pre>
 
-    <p>The first segment is the bucket's name, the rest is the file's path inside it:</p>
+    <p>
+        The first segment is your project, the second is the bucket, and the rest is the file's path
+        inside it. The project is a namespace of its own, so a bucket name only has to be unique within
+        yours — another account can have a <code>photos</code> bucket too:
+    </p>
 
-    <pre><code><?= $host . $prefix ?>/photos/2026/hero.jpg</code></pre>
+    <pre><code><?= $host . $prefix ?>/<?= $project ?>/photos/2026/hero.jpg</code></pre>
 
     <h3>What a request gets</h3>
 
@@ -79,7 +83,7 @@
     </p>
 
     <h3>Force a download</h3>
-    <pre><code><?= $host . $prefix ?>/files/report.pdf?download=1</code></pre>
+    <pre><code><?= $host . $prefix ?>/<?= $project ?>/files/report.pdf?download=1</code></pre>
 </section>
 
 <section id="images">
@@ -134,12 +138,12 @@
         Named sizes like <code>?p=thumb</code> are defined on the server. They are the interface worth
         using: when the design changes you redefine one preset instead of every URL on every page.
     </p>
-    <pre><code><?= $host . $prefix ?>/photos/hero.jpg?p=thumb</code></pre>
+    <pre><code><?= $host . $prefix ?>/<?= $project ?>/photos/hero.jpg?p=thumb</code></pre>
 
     <h3>Responsive images</h3>
-    <pre><code>&lt;img src="<?= $host . $prefix ?>/photos/hero.jpg?w=600&amp;fit=cover"
-     srcset="<?= $host . $prefix ?>/photos/hero.jpg?w=600 600w,
-             <?= $host . $prefix ?>/photos/hero.jpg?w=1200 1200w"
+    <pre><code>&lt;img src="<?= $host . $prefix ?>/<?= $project ?>/photos/hero.jpg?w=600&amp;fit=cover"
+     srcset="<?= $host . $prefix ?>/<?= $project ?>/photos/hero.jpg?w=600 600w,
+             <?= $host . $prefix ?>/<?= $project ?>/photos/hero.jpg?w=1200 1200w"
      sizes="(max-width: 600px) 100vw, 600px" alt=""&gt;</code></pre>
 </section>
 
@@ -147,8 +151,8 @@
     <h2>Buckets</h2>
 
     <p>
-        A bucket is a folder with rules. Its name is the first segment of every URL it serves, so it is
-        unique across the whole installation.
+        A bucket is a folder with rules. Its name is the segment after the project in every URL it serves,
+        and only has to be unique inside that project.
     </p>
 
     <table class="table">
@@ -215,7 +219,7 @@
 
     <pre><code>{
   "ok": true,
-  "url": "<?= $host . $prefix ?>/invoices/2026-08.pdf?exp=1786000600&amp;sig=hK3...",
+  "url": "<?= $host . $prefix ?>/<?= $project ?>/invoices/2026-08.pdf?exp=1786000600&amp;sig=hK3...",
   "expires_at": "2026-08-13T03:20:00+03:00"
 }</code></pre>
 
@@ -298,7 +302,7 @@ X-Cdn-Signature: hmac-sha256( METHOD\nPATH\nsha256(body)\ntimestamp , secret )</
     "mime": "image/jpeg",
     "size": 384022,
     "width": 3000, "height": 2000,
-    "url": "<?= $host . $prefix ?>/photos/2026/hero.jpg"
+    "url": "<?= $host . $prefix ?>/<?= $project ?>/photos/2026/hero.jpg"
   }],
   "errors": []
 }</code></pre>

@@ -11,6 +11,14 @@
 
     <div class="card mb-3">
         <div class="card-body">
+            <?php
+            # An existing bucket keeps its project: moving one would change every
+            # url it serves, which is a different operation from editing it.
+            $current = isset($bucket['project_id'])
+                ? Tenant::projectOf($bucket)
+                : $projects[0];
+            ?>
+
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Name</label>
@@ -19,16 +27,37 @@
                 </div>
 
                 <div class="col-md-6">
+                    <label class="form-label">Project</label>
+
+                    <?php if (isset($bucket['id']) || count($projects) < 2) : ?>
+                        <input class="form-control" value="<?= e($current['name'], false) ?>" disabled>
+                        <input type="hidden" name="project" value="<?= $current['id'] ?>">
+                        <div class="form-text">
+                            <?= isset($bucket['id'])
+                                ? 'A bucket cannot move — its project is in every URL it serves.'
+                                : 'Add more projects in Settings to separate namespaces.' ?>
+                        </div>
+                    <?php else : ?>
+                        <select name="project" class="form-select" id="project-select">
+                            @foreach($projects as $option)
+                            <option value="{{ $option['id'] }}" data-slug="{{ $option['slug'] }}">{{ $option['name'] }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Which namespace this bucket lives under.</div>
+                    <?php endif ?>
+                </div>
+
+                <div class="col-12">
                     <label class="form-label">URL name</label>
                     <div class="input-group">
-                        <span class="input-group-text mono">/cdn/</span>
+                        <span class="input-group-text mono" id="url-prefix">/cdn/<?= $current['slug'] ?>/</span>
                         <input name="slug" class="form-control mono" value="{{ $bucket['slug'] ?? '' }}" placeholder="images" required>
                     </div>
                     <div class="form-text">
                         @if(isset($bucket['id']))
                         Changing this breaks every URL already in use.
                         @else
-                        Appears in every URL. Must be unused across the whole service.
+                        Only has to be unused inside this project — other accounts can have one with the same name.
                         @endif
                     </div>
                 </div>
@@ -193,4 +222,15 @@
         <a href="{{ route('cdn-admin.buckets') }}" class="btn btn-outline-secondary">Cancel</a>
     </div>
 </form>
+@endsection
+
+@section('footer')
+<script>
+    // The prefix beside the URL name is the project's slug, so it has to follow
+    // the select - otherwise it shows the address of a different project than
+    // the one the bucket is about to be created in.
+    $('#project-select').on('change', function () {
+        $('#url-prefix').text('/cdn/' + $(this).find('option:selected').data('slug') + '/');
+    });
+</script>
 @endsection

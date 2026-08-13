@@ -28,7 +28,10 @@ Route::pre($prefix, '/cdn')->noCSRF()->group(function () {
     Route::get('/_health', [DeliveryController::class, 'health'])->name('health');
 
     /**
-     * The public endpoint.
+     * The public endpoint: /cdn/<project>/<bucket>/<path>.
+     *
+     * The project is a segment of its own so that a bucket name only has to be
+     * unique inside a project - every account gets to call one "photos".
      *
      * The router matches segment by segment and has no catch-all, so the object
      * path is spelled out as one required segment and seven optional ones. That
@@ -39,7 +42,7 @@ Route::pre($prefix, '/cdn')->noCSRF()->group(function () {
      * download manager asks about a file before fetching it, and OPTIONS is the
      * browser's preflight. Both are handled inside.
      */
-    Route::any('/{bucket}/{p1}/{?p2}/{?p3}/{?p4}/{?p5}/{?p6}/{?p7}/{?p8}', [DeliveryController::class, 'serve'])->name('serve');
+    Route::any('/{project}/{bucket}/{p1}/{?p2}/{?p3}/{?p4}/{?p5}/{?p6}/{?p7}/{?p8}', [DeliveryController::class, 'serve'])->name('serve');
 });
 #endregion
 
@@ -104,6 +107,7 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin'), '/cdn-admin')
         Route::get('/activity', [AdminController::class, 'activity'])->name('activity');
 
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-        Route::post('/settings', [AdminController::class, 'settingsSave'])->name('settings.save');
+        Route::post('/settings/projects', [AdminController::class, 'projectCreate'])->name('projects.create');
+        Route::post('/settings/projects/{id}', [AdminController::class, 'projectSave'])->name('projects.save');
     });
 #endregion

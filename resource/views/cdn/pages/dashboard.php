@@ -46,7 +46,7 @@ $peak = max(1, max(array_map(fn($day) => (int) $day['requests'], $series ?: [['r
                     <label class="form-label small mb-1">Into bucket</label>
                     <select name="bucket" class="form-select form-select-sm">
                         @foreach($buckets as $bucket)
-                        <option value="{{ $bucket['id'] }}">{{ $bucket['name'] }} — /{{ $bucket['slug'] }}</option>
+                        <option value="{{ $bucket['id'] }}">{{ $bucket['name'] }} — /{{ Tenant::projectOf($bucket)['slug'] }}/{{ $bucket['slug'] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -94,10 +94,10 @@ $peak = max(1, max(array_map(fn($day) => (int) $day['requests'], $series ?: [['r
     <div class="col-md-3 col-6">
         <div class="stat">
             <div class="label">Stored</div>
-            <div class="value">{{ File::humanFileSize($project['storage_used']) }}</div>
+            <div class="value">{{ File::humanFileSize($usage['used']) }}</div>
             <div class="hint">
-                @if($project['storage_quota'] > 0)
-                of {{ File::humanFileSize($project['storage_quota']) }}
+                @if($usage['quota'] > 0)
+                of {{ File::humanFileSize($usage['quota']) }}
                 @else
                 no limit set
                 @endif

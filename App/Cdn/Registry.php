@@ -27,23 +27,37 @@ class Registry
     private static array $local = [];
 
     /**
+     * A bucket by its project's slug and its own.
+     *
+     * Both halves are needed: a bucket slug is only unique inside its project,
+     * which is what lets every account have a bucket called "photos".
+     *
+     * @param string $projectSlug
      * @param string $slug
      * @return array|null
      */
-    public static function bucket(string $slug): ?array
+    public static function bucket(string $projectSlug, string $slug): ?array
     {
-        $slug = strtolower(trim($slug));
-        if ($slug === '') return null;
+        $projectSlug = strtolower(trim($projectSlug));
+        $slug        = strtolower(trim($slug));
 
-        if (array_key_exists("b:$slug", self::$local)) return self::$local["b:$slug"];
+        if ($projectSlug === '' || $slug === '') return null;
+
+        $key = "b:$projectSlug/$slug";
+        if (array_key_exists($key, self::$local)) return self::$local[$key];
 
         $row = GlobalCache::cache(
-            'cdn.bucket.' . md5($slug),
-            fn() => (new Buckets)->where('slug', $slug)->closureMode(false)->first() ?: null,
+            'cdn.bucket.' . md5("$projectSlug/$slug"),
+            function () use ($projectSlug, $slug) {
+                $project = (new Projects)->where('slug', $projectSlug)->closureMode(false)->first();
+                if (!$project) return null;
+
+                return (new Buckets)->where('project_id', $project['id'])->where('slug', $slug)->closureMode(false)->first() ?: null;
+            },
             (int) Support::config('cache.registry-ttl', 300)
         );
 
-        return self::$local["b:$slug"] = ($row ?: null);
+        return self::$local[$key] = ($row ?: null);
     }
 
     /**
@@ -71,16 +85,23 @@ class Registry
      * and a stale copy of that would keep serving derivatives that were just
      * invalidated.
      *
-     * @param string|null $slug
+     * Takes the bucket row rather than a slug, because the cache key now needs
+     * the project too and every caller already has the row in hand.
+     *
+     * @param array|null $bucket
      * @return void
      */
-    public static function forgetBucket(?string $slug): void
+    public static function forgetBucket(?array $bucket): void
     {
-        if (!$slug) return;
+        if (!$bucket || empty($bucket['slug'])) return;
 
-        $slug = strtolower(trim($slug));
-        GlobalCache::remove('cdn.bucket.' . md5($slug));
-        unset(self::$local["b:$slug"]);
+        $project = self::project((int) ($bucket['project_id'] ?? 0));
+        if (!$project) return;
+
+        $key = strtolower($project['slug'] . '/' . $bucket['slug']);
+
+        GlobalCache::remove('cdn.bucket.' . md5($key));
+        unset(self::$local["b:$key"]);
     }
 
     /**

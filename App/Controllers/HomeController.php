@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 use App\Cdn\Support;
 use zFramework\Core\Abstracts\Controller;
-use zFramework\Core\Facades\Auth;
 
 /**
  * The public front of the service.
@@ -26,9 +25,11 @@ class HomeController extends Controller
      */
     public function index(): mixed
     {
-        # Somebody signed in has no use for the pitch.
-        if (Auth::check()) redirect((string) (Support::config('admin.route') ?: '/panel'));
-
+        # Signed-in visitors used to be redirected to the panel from here, which
+        # made the panel's own "public site" link a dead end - it bounced
+        # straight back. The nav shows "Open panel" when there is a session, so
+        # the convenience is kept without taking the page away from the person
+        # who asked for it.
         return view('cdn.home', [
             'registration' => (bool) Support::config('auth.registration', true),
         ]);

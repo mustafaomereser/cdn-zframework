@@ -16,11 +16,17 @@
                 </p>
 
                 <div class="url-demo mb-4">
-                    https://<?= $host ?>/cdn/<b>photos</b>/hero.jpg<span class="q">?w=1200&amp;fit=cover&amp;format=webp</span>
+                    https://<?= $host ?>/cdn/<b>your-project</b>/<b>photos</b>/hero.jpg<span class="q">?w=1200&amp;fit=cover&amp;format=webp</span>
                 </div>
 
+                <?php # The page no longer redirects a signed-in visitor to the panel,
+                      # so it has to stop asking them to sign up for what they
+                      # already have. ?>
                 <div class="d-flex gap-2 flex-wrap">
-                    @if($registration)
+                    @if(zFramework\Core\Facades\Auth::check())
+                    <a href="{{ route('cdn-admin.dashboard') }}" class="btn btn-primary">Open your panel</a>
+                    <a href="{{ route('docs') }}" class="btn btn-outline-secondary">Documentation</a>
+                    @elseif($registration)
                     <a href="{{ route('auth-form') }}#signup" class="btn btn-primary">Create an account</a>
                     <a href="{{ route('auth-form') }}" class="btn btn-outline-secondary">Sign in</a>
                     @else
@@ -28,7 +34,7 @@
                     @endif
                 </div>
 
-                @if(!$registration)
+                @if(!$registration && !zFramework\Core\Facades\Auth::check())
                 <p class="hint mt-3 mb-0">
                     <i class="bi bi-lock"></i> This installation is private — accounts are created by its operator.
                 </p>
@@ -64,8 +70,11 @@
     </div>
 </section>
 
+@if(!zFramework\Core\Facades\Auth::check())
 <section class="container py-5">
     <div class="row g-4 align-items-start">
+        <?php # Shown to visitors who have not signed up; a signed-in reader has
+              # done all three already. ?>
         <?php foreach ([
             ['Create an account', 'You get a project, a first bucket and a quota straight away. Nothing to configure.'],
             ['Upload', 'Drag files into the panel, or POST them from your own code with an API key.'],
@@ -83,6 +92,7 @@
         <?php endforeach ?>
     </div>
 </section>
+@endif
 
 <section class="container pb-5">
     <h2 class="section-title">What you get</h2>

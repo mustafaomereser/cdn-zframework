@@ -68,10 +68,34 @@ class ApiController
     {
         if (!$slug) return null;
 
-        $bucket = Registry::bucket((string) $slug);
+        # Scoped to the key`s project: a bucket slug is unique inside a project,
+        # not across the installation, so a bare slug means nothing on its own.
+        $bucket = (new Buckets)
+            ->where("project_id", Credentials::projectId())
+            ->where("slug", (string) $slug)
+            ->closureMode(false)
+            ->first();
+
         if (!$bucket || !Credentials::allows($bucket)) return null;
 
         return $bucket;
+    }
+
+    /**
+     * A bucket of the key`s project, by id.
+     *
+     * @param int $id
+     * @return array|null
+     */
+    private function bucketById(int $id): ?array
+    {
+        $bucket = (new Buckets)
+            ->where("project_id", Credentials::projectId())
+            ->where("id", $id)
+            ->closureMode(false)
+            ->first();
+
+        return $bucket && Credentials::allows($bucket) ? $bucket : null;
     }
 
     /**
@@ -177,9 +201,9 @@ class ApiController
         Credentials::require('read');
 
         $file   = (new Files)->closureMode(false)->find($id);
-        $bucket = $file ? Registry::bucket((string) ($this->slugOf((int) $file['bucket_id']))) : null;
+        $bucket = $file ? $this->bucketById((int) $file['bucket_id']) : null;
 
-        if (!$file || !$bucket || !Credentials::allows($bucket)) return $this->json(['ok' => false, 'error' => 'not-found'], 404);
+        if (!$file || !$bucket) return $this->json(['ok' => false, 'error' => 'not-found'], 404);
 
         return $this->json(['ok' => true, 'file' => $this->present($file, $bucket)]);
     }
@@ -235,7 +259,7 @@ class ApiController
             return $this->json(['ok' => false, 'error' => 'no-file'], 400);
         }
 
-        Registry::forgetBucket($bucket['slug']);
+        Registry::forgetBucket($bucket);
 
         $files  = [];
         $errors = [];
@@ -326,8 +350,8 @@ class ApiController
 
         if (!$result['ok']) return $this->json($result, 422);
 
-        $bucket = Registry::bucket((string) $this->slugOf((int) $result['file']['bucket_id']));
-        Registry::forgetBucket($bucket['slug'] ?? null);
+        $bucket = $this->bucketById((int) $result['file']['bucket_id']);
+        Registry::forgetBucket($bucket);
 
         return $this->json(['ok' => true, 'file' => $this->present($result['file'], $bucket ?: [])], 201);
     }
@@ -369,11 +393,11 @@ class ApiController
 
         if (!$file) return $this->json(['ok' => false, 'error' => 'not-found'], 404);
 
-        $bucket = Registry::bucket((string) $this->slugOf((int) $file['bucket_id']));
-        if (!$bucket || !Credentials::allows($bucket)) return $this->json(['ok' => false, 'error' => 'forbidden'], 403);
+        $bucket = $this->bucketById((int) $file['bucket_id']);
+        if (!$bucket) return $this->json(['ok' => false, 'error' => 'forbidden'], 403);
 
         Uploader::delete($file);
-        Registry::forgetBucket($bucket['slug']);
+        Registry::forgetBucket($bucket);
 
         return $this->json(['ok' => true, 'deleted' => $file['path']]);
     }
@@ -427,7 +451,7 @@ class ApiController
         $ttl   = (int) ($input['ttl'] ?? Support::config('signing.ttl', 3600));
         $query = (array) ($input['query'] ?? []);
 
-        $url = Signature::url($bucket['slug'], $path, [
+        $url = Signature::url($this->projectSlug(), $bucket['slug'], $path, [
             'bucket'  => $bucket,
             'ttl'     => $ttl,
             'query'   => $query,
@@ -458,17 +482,6 @@ class ApiController
         ]);
     }
 
-    /**
-     * The bucket slug for an id, without a second cached lookup path.
-     *
-     * @param int $id
-     * @return string|null
-     */
-    private function slugOf(int $id): ?string
-    {
-        $row = (new Buckets)->closureMode(false)->find((string) $id);
-        return $row['slug'] ?? null;
-    }
 
     /**
      * A file as the API describes it.
@@ -480,7 +493,7 @@ class ApiController
     private function present(array $file, array $bucket): array
     {
         $prefix = rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/');
-        $url    = (function_exists('host') ? host() : '') . $prefix . '/' . ($bucket['slug'] ?? '') . '/' . $file['path'];
+        $url    = (function_exists('host') ? host() : '') . $prefix . '/' . $this->projectSlug() . '/' . ($bucket['slug'] ?? '') . '/' . $file['path'];
 
         return [
             'id'         => (int) $file['id'],
@@ -503,7 +516,25 @@ class ApiController
             # that works - otherwise every caller writes the same signing code.
             'url'        => ($bucket['visibility'] ?? 'public') === 'public'
                 ? $url
-                : Signature::url((string) ($bucket['slug'] ?? ''), $file['path'], ['bucket' => $bucket]),
+                : Signature::url($this->projectSlug(), (string) ($bucket['slug'] ?? ''), $file['path'], ['bucket' => $bucket]),
         ];
+    }
+
+    /**
+     * The slug of the key's project - the first segment of every URL it can
+     * produce. Resolved once per request.
+     *
+     * @return string
+     */
+    private function projectSlug(): string
+    {
+        static $slug = null;
+
+        if ($slug === null) {
+            $project = (new Projects)->closureMode(false)->find((string) Credentials::projectId());
+            $slug    = (string) ($project['slug'] ?? '');
+        }
+
+        return $slug;
     }
 }

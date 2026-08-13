@@ -102,10 +102,10 @@ class Console
 
         $help = [
             'setup'  => 'Create the storage directories and a first project + bucket.',
-            'import' => 'Import a directory into a bucket.        bucket= from= [prefix=]',
+            'import' => 'Import a directory into a bucket.        bucket= from= [project=] [prefix=]',
             'key'    => 'Manage API keys.                         create name= scopes= | list | revoke access=',
-            'sign'   => 'Print a signed URL.                      bucket= path= [ttl=]',
-            'purge'  => 'Invalidate derivatives.                  bucket= [prefix= | path= | tag=]',
+            'sign'   => 'Print a signed URL.                      bucket= path= [project=] [ttl=]',
+            'purge'  => 'Invalidate derivatives.                  bucket= [project=] [prefix= | path= | tag=]',
             'gc'     => 'Orphans, expired uploads, eviction.      [grace=3600]',
             'rollup' => 'Fold a day of access logs into stats.    [date=YYYY-MM-DD]',
             'prune'  => 'Delete access logs past retention.       [days=30]',
@@ -149,7 +149,7 @@ class Console
         $slug    = self::$parameters['bucket'] ?? 'assets';
         $buckets = new Buckets;
 
-        if (!$buckets->where('slug', $slug)->closureMode(false)->first()) {
+        if (!$buckets->where('project_id', $project['id'])->where('slug', $slug)->closureMode(false)->first()) {
             $buckets->insert([
                 'project_id'  => $project['id'],
                 'name'        => ucfirst($slug),
@@ -159,7 +159,7 @@ class Console
             Terminal::text("[color=green]Bucket created:[/color] $slug");
         }
 
-        Terminal::text("\n[color=cyan]Delivery:[/color] " . rtrim((string) config('cdn.delivery.url-prefix'), '/') . "/$slug/<path>");
+        Terminal::text("\n[color=cyan]Delivery:[/color] " . rtrim((string) config('cdn.delivery.url-prefix'), '/') . "/{$project['slug']}/$slug/<path>");
         Terminal::text('[color=cyan]Panel:   [/color] ' . (config('cdn.admin.route') ?: '/cdn-admin'));
         Terminal::text('[color=cyan]Driver:  [/color] ' . Transform::driver());
     }
@@ -302,16 +302,9 @@ class Console
      */
     public static function purge(): void
     {
-        $slug   = self::$parameters['bucket'] ?? null;
-        $bucket = $slug ? (new Buckets)->where('slug', $slug)->closureMode(false)->first() : null;
+        $bucket = self::resolveBucket();
 
-        if (!$bucket) {
-
-            Terminal::text('[color=red]bucket=<slug> is required and must exist.[/color]');
-
-            return;
-
-        }
+        if (!$bucket) return;
 
         $result = match (true) {
             isset(self::$parameters['path'])   => Purger::path($bucket, self::$parameters['path'], 'cli'),
@@ -320,7 +313,7 @@ class Console
             default => Purger::bucket($bucket, 'cli'),
         };
 
-        Registry::forgetBucket($bucket['slug']);
+        Registry::forgetBucket($bucket);
 
         if (!($result['ok'] ?? false)) {
 
@@ -412,16 +405,14 @@ class Console
      */
     public static function sign(): void
     {
-        $slug   = self::$parameters['bucket'] ?? null;
         $path   = self::$parameters['path'] ?? null;
-        $bucket = $slug ? (new Buckets)->where('slug', $slug)->closureMode(false)->first() : null;
+        $bucket = self::resolveBucket();
 
-        if (!$bucket || !$path) {
+        if (!$bucket) return;
 
-            Terminal::text('[color=red]bucket=<slug> and path=<path> are required.[/color]');
-
+        if (!$path) {
+            Terminal::text('[color=red]path=<path> is required.[/color]');
             return;
-
         }
 
         $ttl = (int) (self::$parameters['ttl'] ?? 3600);
@@ -429,7 +420,8 @@ class Console
         # host() is empty under the CLI - there is no request to read a host from
         # - so the base has to be given or the url comes out relative.
         $host = rtrim((string) (self::$parameters['host'] ?? ''), '/');
-        $url  = $host . Signature::url($bucket['slug'], $path, ['bucket' => $bucket, 'ttl' => $ttl]);
+        $project = (new Projects)->closureMode(false)->find((string) $bucket['project_id']);
+        $url     = $host . Signature::url((string) $project['slug'], $bucket['slug'], $path, ['bucket' => $bucket, 'ttl' => $ttl]);
 
         Terminal::text($url);
         if ($host === '') Terminal::text('[color=dark-gray]Relative: pass host=https://cdn.example.com for an absolute url.[/color]');
@@ -443,19 +435,12 @@ class Console
      */
     public static function import(): void
     {
-        $slug   = self::$parameters['bucket'] ?? null;
         $from   = self::$parameters['from'] ?? null;
         $prefix = trim((string) (self::$parameters['prefix'] ?? ''), '/');
 
-        $bucket = $slug ? (new Buckets)->where('slug', $slug)->closureMode(false)->first() : null;
+        $bucket = self::resolveBucket();
 
-        if (!$bucket) {
-
-            Terminal::text('[color=red]bucket=<slug> is required and must exist.[/color]');
-
-            return;
-
-        }
+        if (!$bucket) return;
         if (!$from || !is_dir($from)) {
             Terminal::text('[color=red]from=<directory> is required and must exist.[/color]');
             return;
@@ -487,7 +472,7 @@ class Console
             else $failed[] = "$relative ({$result['error']})";
         }
 
-        Registry::forgetBucket($bucket['slug']);
+        Registry::forgetBucket($bucket);
 
         Terminal::text("[color=green]Imported[/color] $ok file(s).");
 
@@ -568,5 +553,55 @@ class Console
 
         $free = Storage::freeSpace();
         if ($free !== null) Terminal::text('  free       ' . File::humanFileSize($free));
+    }
+    /**
+     * The bucket a command is talking about.
+     *
+     * bucket=<slug> is unique inside a project, not across the installation, so
+     * with more than one project the slug alone can be ambiguous. Rather than
+     * picking one, it says which projects have that name and asks for
+     * project=<slug>.
+     *
+     * @return array|null
+     */
+    private static function resolveBucket(): ?array
+    {
+        $slug = self::$parameters['bucket'] ?? null;
+
+        if (!$slug) {
+            Terminal::text('[color=red]bucket=<slug> is required.[/color]');
+            return null;
+        }
+
+        $model = (new Buckets)->where('slug', $slug)->closureMode(false);
+
+        if ($project = self::$parameters['project'] ?? null) {
+            $row = (new Projects)->where('slug', $project)->closureMode(false)->first();
+
+            if (!$row) {
+                Terminal::text("[color=red]No project called `$project`.[/color]");
+                return null;
+            }
+
+            $model->where('project_id', $row['id']);
+        }
+
+        $matches = $model->get();
+
+        if (!count($matches)) {
+            Terminal::text("[color=red]No bucket called `$slug`" . (isset($project) ? " in `$project`" : '') . '.[/color]');
+            return null;
+        }
+
+        if (count($matches) === 1) return $matches[0];
+
+        Terminal::text("[color=yellow]`$slug` exists in more than one project - add project=<slug>:[/color]");
+
+        foreach ($matches as $match) {
+            $owner = (new Projects)->closureMode(false)->find((string) $match['project_id']);
+            Terminal::text('  ' . ($owner['slug'] ?? '?'));
+        }
+
+        return null;
     }
 }

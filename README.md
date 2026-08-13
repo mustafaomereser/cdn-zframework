@@ -6,7 +6,7 @@ Sign up, upload a file, get a URL. Ask for a different size or format by
 changing the query string. Everything the panel does, an API key can do.
 
 ```
-https://cdn.example.com/cdn/photos/2026/hero.jpg?w=1200&fit=cover&format=webp
+https://cdn.example.com/cdn/acme/photos/2026/hero.jpg?w=1200&fit=cover&format=webp
 ```
 
 Not a wrapper around somebody else's CDN — this *is* the origin, the cache, the
@@ -37,7 +37,9 @@ and run it for other people.
 ## 1. For the person using it
 
 1. **Create an account** at `/auth`. You get a project, a first bucket and a
-   quota immediately — nothing to configure.
+   quota immediately — nothing to configure. Your project name becomes the first
+   segment of every URL you serve; add more in Settings when you want a second
+   namespace.
 2. **Drag a file** onto the Overview page.
 3. **Copy the URL.** That is the file. Paste it into an `<img src>` and you are
    done.
@@ -88,13 +90,15 @@ people reading the repository rather than the service.
 
 ## 3. Concepts
 
-**Project** — your space. One per account: your buckets, your files, your keys,
-your quota. Nothing is shared and nothing is visible between accounts.
+**Project** — a namespace, and the first segment of every URL it serves. An
+account can own several: separating a staging site from a live one, or one
+client from another. Buckets, files, keys and quota all belong to a project, and
+nothing is visible between accounts.
 
-**Bucket** — a folder with rules. Its name is the first path segment of every
-URL it serves, so it is unique across the whole installation. Caching, whether
-URLs are public, which file types are accepted, who may hotlink — all per
-bucket.
+**Bucket** — a folder with rules. Its name is the segment after the project, so
+it only has to be unique *within* a project: every account gets to have one
+called `photos`. Caching, whether URLs are public, which file types are
+accepted, who may hotlink — all per bucket.
 
 **File** — one object at a path inside a bucket.
 
@@ -106,7 +110,7 @@ deleted. Uploading the same asset to ten places costs one copy.
 result. Disposable, because it can always be rebuilt.
 
 ```
-project ──< buckets ──< files >── objects
+account ──< projects ──< buckets ──< files >── objects
                           │
                           └──< variants
 ```
@@ -116,7 +120,7 @@ project ──< buckets ──< files >── objects
 ## 4. URLs
 
 ```
-/cdn/<bucket>/<path>
+/cdn/<project>/<bucket>/<path>
 ```
 
 What a request gets:
@@ -266,7 +270,7 @@ curl -X POST https://cdn.example.com/api/cdn/v1/files \
     "hash": "cb86732f2235…",
     "etag": "\"cb86732f2235…\"",
     "width": 3000, "height": 2000,
-    "url": "https://cdn.example.com/cdn/photos/2026/hero.jpg"
+    "url": "https://cdn.example.com/cdn/acme/photos/2026/hero.jpg"
   }],
   "errors": []
 }

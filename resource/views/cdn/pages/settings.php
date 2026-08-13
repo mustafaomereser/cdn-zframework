@@ -1,66 +1,68 @@
 @extends('cdn.main')
 @section('title', 'Settings')
-@section('lede', 'Your project, and how to reach it from code.')
+@section('lede', 'Your projects, and how to reach them from code.')
 
 @section('body')
-<?php $base = host() . rtrim((string) config('cdn.api.route'), '/') . '/v1'; ?>
 
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h6 class="mb-3">Project</h6>
+                <h6>Projects</h6>
+                <p class="hint">
+                    A project is a namespace in your URLs. Bucket names only have to be unique inside one, so two
+                    projects can both have a bucket called <code>photos</code>.
+                </p>
 
-                <form action="{{ route('cdn-admin.settings.save') }}" method="POST" class="mb-3">
+                @foreach($projects as $project)
+                <div class="border rounded p-3 mb-2" style="border-color: var(--line) !important">
+                    <form action="{{ route('cdn-admin.projects.save', ['id' => $project['id']]) }}" method="POST">
+                        <?= csrf() ?>
+                        <div class="input-group input-group-sm mb-2">
+                            <input name="name" class="form-control" value="{{ $project['name'] }}" required>
+                            <button class="btn btn-outline-secondary">Rename</button>
+                        </div>
+                    </form>
+
+                    <div class="mono hint">{{ rtrim(config('cdn.delivery.url-prefix'), '/') }}/{{ $project['slug'] }}/…</div>
+
+                    <div class="d-flex justify-content-between small mt-2">
+                        <span class="hint">Stored</span>
+                        <span>
+                            {{ File::humanFileSize($project['storage_used']) }}
+                            @if($project['storage_quota'] > 0)
+                            <span class="hint">of {{ File::humanFileSize($project['storage_quota']) }}</span>
+                            @endif
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between small">
+                        <span class="hint">Transfer this month</span>
+                        <span>
+                            {{ File::humanFileSize($project['bandwidth_used']) }}
+                            @if($project['bandwidth_quota'] > 0)
+                            <span class="hint">of {{ File::humanFileSize($project['bandwidth_quota']) }}</span>
+                            @endif
+                        </span>
+                    </div>
+                </div>
+                @endforeach
+
+                <form action="{{ route('cdn-admin.projects.create') }}" method="POST" class="mt-3">
                     <?= csrf() ?>
-                    <label class="form-label">Name</label>
-                    <div class="input-group">
-                        <input name="name" class="form-control" value="{{ $project['name'] }}" required>
-                        <button class="btn btn-outline-secondary">Save</button>
+                    <label class="form-label">Add a project</label>
+                    <div class="input-group input-group-sm">
+                        <input name="name" class="form-control" placeholder="Staging site" required>
+                        <button class="btn btn-primary">Create</button>
+                    </div>
+                    <div class="form-text">
+                        The URL name is taken from this and cannot be changed afterwards — it is in every address the
+                        project serves.
                     </div>
                 </form>
-
-                <dl class="row small mb-0">
-                    <dt class="col-5 text-secondary">Stored</dt>
-                    <dd class="col-7">
-                        {{ File::humanFileSize($project['storage_used']) }}
-                        @if($project['storage_quota'] > 0)
-                        <span class="text-secondary">of {{ File::humanFileSize($project['storage_quota']) }}</span>
-                        @endif
-                    </dd>
-
-                    <dt class="col-5 text-secondary">Transfer this month</dt>
-                    <dd class="col-7">
-                        {{ File::humanFileSize($project['bandwidth_used']) }}
-                        @if($project['bandwidth_quota'] > 0)
-                        <span class="text-secondary">of {{ File::humanFileSize($project['bandwidth_quota']) }}</span>
-                        @endif
-                    </dd>
-                </dl>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-body">
-                <h6 class="mb-3">Using it from code</h6>
-
-                <label class="form-label small mb-1">API address</label>
-                <div class="input-group input-group-sm mb-3">
-                    <input class="form-control mono" value="{{ $base }}" readonly>
-                    <button class="btn btn-outline-secondary" data-copy="{{ $base }}"><i class="bi bi-clipboard"></i></button>
-                </div>
-
-                <p class="hint">Upload a file with a key from the API keys page:</p>
-
-                <pre class="small bg-light p-3 rounded mb-0"><code>curl -X POST {{ $base }}/files \
-  -H "X-Cdn-Key: cdn_..." \
-  -H "X-Cdn-Secret: ..." \
-  -F bucket=your-bucket \
-  -F file=@photo.jpg</code></pre>
-
-                <p class="hint mt-2 mb-0">The reply contains the file's URL. The README has the rest.</p>
-            </div>
-        </div>
     </div>
 
     <div class="col-lg-6">
@@ -130,15 +132,16 @@
 
             <div class="card mb-3">
                 <div class="card-body">
-                    <h6 class="mb-3">Projects on this installation</h6>
+                    <h6 class="mb-3">Every project on this installation</h6>
 
                     <div class="table-responsive">
                         <table class="table table-sm mb-0">
-                            <thead><tr><th>Project</th><th class="text-end">Stored</th><th class="text-end">Transfer</th></tr></thead>
+                            <thead><tr><th>Project</th><th>URL</th><th class="text-end">Stored</th><th class="text-end">Transfer</th></tr></thead>
                             <tbody>
                                 @foreach($system['projects'] as $row)
                                 <tr>
                                     <td class="truncate">{{ $row['name'] }}</td>
+                                    <td class="mono hint">/{{ $row['slug'] }}/</td>
                                     <td class="text-end">{{ File::humanFileSize($row['storage_used']) }}</td>
                                     <td class="text-end">{{ File::humanFileSize($row['bandwidth_used']) }}</td>
                                 </tr>

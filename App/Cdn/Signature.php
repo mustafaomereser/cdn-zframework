@@ -129,17 +129,24 @@ class Signature
     /**
      * A complete signed URL.
      *
+     * The signed target is project/bucket/path - the same string the delivery
+     * route reconstructs - so a signature made for one project's bucket cannot
+     * be replayed against another's bucket of the same name.
+     *
+     * @param string $projectSlug
      * @param string $bucketSlug
      * @param string $path
      * @param array  $options
      * @return string
      */
-    public static function url(string $bucketSlug, string $path, array $options = []): string
+    public static function url(string $projectSlug, string $bucketSlug, string $path, array $options = []): string
     {
         $prefix = rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/');
-        $target = trim($bucketSlug, '/') . '/' . ltrim($path, '/');
+        $target = trim($projectSlug, '/') . '/' . trim($bucketSlug, '/') . '/' . ltrim($path, '/');
 
-        $base = (function_exists('host') ? host() : '') . $prefix . '/' . $target;
+        # host() reads $_SERVER, which the CLI does not have - a command line
+        # caller passes its own base instead.
+        $base = (PHP_SAPI === 'cli' ? '' : host()) . $prefix . '/' . $target;
 
         return $base . '?' . self::query($target, $options);
     }
@@ -173,7 +180,7 @@ class Signature
         # Address binding is requested by a signed parameter, so a client cannot
         # drop it: removing it changes the payload and the signature fails.
         $bound = !empty($query[$names['ip']]);
-        $client = $bound ? (string) ($ip ?? (function_exists('ip') ? ip() : '')) : '';
+        $client = $bound ? (string) ($ip ?? (PHP_SAPI === 'cli' ? '' : ip())) : '';
 
         $expected = self::calculate($path, $query, $bucket, $client);
 

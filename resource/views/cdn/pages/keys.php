@@ -3,6 +3,7 @@
 @section('lede', 'For uploading from your own code. Give each one only the powers it needs.')
 
 @section('body')
+<?php $base = host() . rtrim((string) config('cdn.api.route'), '/') . '/v1'; ?>
 
 <?php if (isset($created)) : ?>
 <div class="alert alert-success">
@@ -34,6 +35,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Name</th>
+                            <th>Project</th>
                             <th>Access key</th>
                             <th>Scopes</th>
                             <th class="text-end">Requests</th>
@@ -49,6 +51,7 @@
                                 @if($key['status'] != 'active')<span class="badge text-bg-secondary">{{ $key['status'] }}</span>@endif
                                 @if($key['expires_at'])<div class="small text-secondary">expires {{ $key['expires_at'] }}</div>@endif
                             </td>
+                            <td class="small">{{ App\Cdn\Tenant::project($key['project_id'])['name'] }}</td>
                             <td class="mono small">{{ $key['access_key'] }}</td>
                             <td class="small">
                                 @foreach(App\Cdn\Support::json($key['scopes']) ?: ['read'] as $scope)
@@ -68,7 +71,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="6" class="text-center text-secondary py-4 small">No keys yet.</td></tr>
+                        <tr><td colspan="7" class="text-center text-secondary py-4 small">No keys yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -88,6 +91,18 @@
                         <label class="form-label">Name</label>
                         <input name="name" class="form-control form-control-sm" placeholder="Deploy pipeline" required>
                     </div>
+
+                    <?php if (count($projects) > 1) : ?>
+                        <div class="mb-3">
+                            <label class="form-label">Project</label>
+                            <select name="project" class="form-select form-select-sm">
+                                @foreach($projects as $option)
+                                <option value="{{ $option['id'] }}">{{ $option['name'] }}</option>
+                                @endforeach
+                            </select>
+                            <div class="form-text">A key can only reach one project.</div>
+                        </div>
+                    <?php endif ?>
 
                     <div class="mb-3">
                         <label class="form-label">Scopes</label>
@@ -128,6 +143,51 @@
                 </form>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-body">
+        <h6>Using it from code</h6>
+        <p class="hint">
+            A key belongs to one project, so <code>bucket</code> is just the bucket's name — the project is
+            already decided by the key.
+        </p>
+
+        <label class="form-label small mb-1">API address</label>
+        <div class="input-group input-group-sm mb-3" style="max-width: 520px">
+            <input class="form-control mono" value="{{ $base }}" readonly>
+            <button class="btn btn-outline-secondary" data-copy="{{ $base }}"><i class="bi bi-clipboard"></i> Copy</button>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="label mb-2">Upload a file</div>
+                <pre class="small bg-light p-3 rounded mb-0"><code>curl -X POST {{ $base }}/files \
+  -H "X-Cdn-Key: cdn_..." \
+  -H "X-Cdn-Secret: ..." \
+  -F bucket=your-bucket \
+  -F path=photos/hero.jpg \
+  -F file=@hero.jpg</code></pre>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="label mb-2">What comes back</div>
+                <pre class="small bg-light p-3 rounded mb-0"><code>{
+  "ok": true,
+  "files": [{
+    "path": "photos/hero.jpg",
+    "size": 384022,
+    "url": "…/cdn/&lt;project&gt;/your-bucket/photos/hero.jpg"
+  }]
+}</code></pre>
+            </div>
+        </div>
+
+        <p class="hint mt-3 mb-0">
+            Listing, deleting, signed URLs, chunked uploads for large files and the rest are in the
+            <a href="{{ route('docs') }}" target="_blank">documentation</a>.
+        </p>
     </div>
 </div>
 @endsection

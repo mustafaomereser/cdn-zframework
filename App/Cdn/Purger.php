@@ -155,7 +155,7 @@ class Purger
         # The cached copy still carries the old version, and the version is part
         # of every derivative signature - without this the purge would appear to
         # do nothing until the cache expired.
-        Registry::forgetBucket($bucket['slug'] ?? null);
+        Registry::forgetBucket($bucket);
 
         $model    = new Variants;
         $variants = $model->where('bucket_id', $bucket['id'])->closureMode(false)->get();
@@ -324,7 +324,8 @@ class Purger
                 'variants'   => (int) ($result['variants'] ?? 0),
                 'bytes'      => (int) ($result['bytes'] ?? 0),
                 'issued_by'  => mb_substr($by, 0, 120),
-                'ip'         => function_exists('ip') ? ip() : null,
+                # No request under the CLI, and ip() reads $_SERVER directly.
+                'ip'         => PHP_SAPI === 'cli' ? null : ip(),
             ], just_insert: true);
         } catch (\Throwable $e) {
             if (function_exists('errorHandler')) errorHandler($e);

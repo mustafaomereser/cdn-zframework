@@ -20,12 +20,14 @@ class CdnBuckets
     {
         return [
             'id'            => ['primary'],
-            'project_id'    => ['bigint', 'required', 'index'],
+            'project_id'    => ['bigint', 'required', 'index', 'unique:cdn_bucket_slug'],
             'name'          => ['varchar:120', 'required'],
 
-            # Globally unique: it is the first path segment of every URL, so two
-            # projects cannot both own 'assets'.
-            'slug'          => ['varchar:120', 'required', 'unique'],
+            # Unique within the project, not across the installation: the url
+            # carries the project as its own segment, so /cdn/ayse/photos and
+            # /cdn/mehmet/photos are different buckets and both people get to
+            # call theirs "photos".
+            'slug'          => ['varchar:120', 'required', 'unique:cdn_bucket_slug'],
 
             # public - anyone with the URL
             # signed - a valid signature required

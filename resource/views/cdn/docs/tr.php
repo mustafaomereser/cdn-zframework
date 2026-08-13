@@ -33,13 +33,15 @@
 <section id="urls">
     <h2>Adresler</h2>
 
-    <pre><code><?= $host . $prefix ?>/&lt;bucket&gt;/&lt;yol&gt;</code></pre>
+    <pre><code><?= $host . $prefix ?>/&lt;proje&gt;/&lt;bucket&gt;/&lt;yol&gt;</code></pre>
 
     <p>
-        İlk parça bucket'ın adı, kalanı dosyanın bucket içindeki yolu. Örnek:
+        İlk parça projenin adı, ikincisi bucket'ın adı, kalanı dosyanın bucket içindeki yolu.
+        Proje kendi ad alanın olduğu için bucket adının sadece kendi projen içinde benzersiz olması yeter —
+        başka bir hesapta da <code>fotograflar</code> adında bir bucket olabilir. Örnek:
     </p>
 
-    <pre><code><?= $host . $prefix ?>/fotograflar/2026/kapak.jpg</code></pre>
+    <pre><code><?= $host . $prefix ?>/<?= $project ?>/fotograflar/2026/kapak.jpg</code></pre>
 
     <h3>Bir istek ne alır</h3>
 
@@ -80,7 +82,7 @@
     </p>
 
     <h3>İndirmeye zorlama</h3>
-    <pre><code><?= $host . $prefix ?>/dosyalar/rapor.pdf?download=1</code></pre>
+    <pre><code><?= $host . $prefix ?>/<?= $project ?>/dosyalar/rapor.pdf?download=1</code></pre>
 </section>
 
 <section id="images">
@@ -136,12 +138,12 @@
         <code>?p=thumb</code> gibi adlandırılmış boyutlar sunucu tarafında tanımlıdır. Tavsiye edilen kullanım
         budur: yarın tasarım değişince tek yerden değiştirirsin, sayfalardaki adresler aynı kalır.
     </p>
-    <pre><code><?= $host . $prefix ?>/fotograflar/kapak.jpg?p=thumb</code></pre>
+    <pre><code><?= $host . $prefix ?>/<?= $project ?>/fotograflar/kapak.jpg?p=thumb</code></pre>
 
     <h3>Duyarlı görsel</h3>
-    <pre><code>&lt;img src="<?= $host . $prefix ?>/fotograflar/kapak.jpg?w=600&amp;fit=cover"
-     srcset="<?= $host . $prefix ?>/fotograflar/kapak.jpg?w=600 600w,
-             <?= $host . $prefix ?>/fotograflar/kapak.jpg?w=1200 1200w"
+    <pre><code>&lt;img src="<?= $host . $prefix ?>/<?= $project ?>/fotograflar/kapak.jpg?w=600&amp;fit=cover"
+     srcset="<?= $host . $prefix ?>/<?= $project ?>/fotograflar/kapak.jpg?w=600 600w,
+             <?= $host . $prefix ?>/<?= $project ?>/fotograflar/kapak.jpg?w=1200 1200w"
      sizes="(max-width: 600px) 100vw, 600px" alt=""&gt;</code></pre>
 </section>
 
@@ -149,8 +151,8 @@
     <h2>Bucket'lar</h2>
 
     <p>
-        Bucket, kuralları olan bir klasör. Adı servis ettiği her adresin ilk parçası olduğu için tüm
-        kurulumda benzersizdir.
+        Bucket, kuralları olan bir klasör. Adı, adresin proje adından sonraki parçasıdır ve yalnızca kendi
+        projesi içinde benzersiz olması gerekir.
     </p>
 
     <table class="table">
@@ -216,7 +218,7 @@
 
     <pre><code>{
   "ok": true,
-  "url": "<?= $host . $prefix ?>/faturalar/2026-08.pdf?exp=1786000600&amp;sig=hK3...",
+  "url": "<?= $host . $prefix ?>/<?= $project ?>/faturalar/2026-08.pdf?exp=1786000600&amp;sig=hK3...",
   "expires_at": "2026-08-13T03:20:00+03:00"
 }</code></pre>
 
@@ -298,7 +300,7 @@ X-Cdn-Signature: hmac-sha256( METHOD\nPATH\nsha256(gövde)\ntimestamp , gizli an
     "mime": "image/jpeg",
     "size": 384022,
     "width": 3000, "height": 2000,
-    "url": "<?= $host . $prefix ?>/fotograflar/2026/kapak.jpg"
+    "url": "<?= $host . $prefix ?>/<?= $project ?>/fotograflar/2026/kapak.jpg"
   }],
   "errors": []
 }</code></pre>
