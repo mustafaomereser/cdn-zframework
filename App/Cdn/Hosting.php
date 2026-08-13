@@ -246,9 +246,24 @@ class Hosting
     {
         if (!self::configured()) return null;
 
-        $response = self::call('Cron/listcron');
+        # UAPI calls this list_lines. `listcron` is the old API2 name, which
+        # answers on some builds and is simply not there on the rest - so the
+        # current name is asked first and the old one is the fallback, rather
+        # than the other way round.
+        $response = self::call('Cron/list_lines');
 
-        if (!is_array($response) || !($response['status'] ?? 0)) return null;
+        if (!is_array($response) || !($response['status'] ?? 0)) {
+            $failure  = self::$last;
+            $response = self::call('Cron/listcron');
+
+            # Keep the first failure: "list_lines is not a function" explains
+            # more than the same sentence about the name that was tried after it.
+            if (!is_array($response) || !($response['status'] ?? 0)) {
+                self::$last = $failure;
+
+                return null;
+            }
+        }
 
         # `data` is the list of lines on every version seen so far, but at
         # least one wraps it in `jobs`. Both are the same answer.
@@ -279,6 +294,32 @@ class Hosting
         }
 
         return $out;
+    }
+
+    /**
+     * Whatever went wrong on the last call, for the page that has to show it.
+     *
+     * @return string|null
+     */
+    public static function lastError(): ?string
+    {
+        $last = self::$last;
+
+        if (($last['error'] ?? null)) return (string) $last['error'];
+
+        $body = (string) ($last['body'] ?? '');
+
+        # cPanel puts the real sentence in `errors`, and everything around it is
+        # noise on a page that is already narrow.
+        $decoded = $body !== '' ? json_decode($body, true) : null;
+
+        if (is_array($decoded) && count((array) ($decoded['errors'] ?? []))) {
+            return implode(' ', array_map('strval', (array) $decoded['errors']));
+        }
+
+        if (($last['code'] ?? 0) >= 400) return 'HTTP ' . $last['code'];
+
+        return $body !== '' ? $body : null;
     }
 
     /**

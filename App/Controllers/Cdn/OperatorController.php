@@ -186,7 +186,11 @@ class OperatorController
             'credentials' => \App\Cdn\Hosting::credentials(),
             'configured'  => \App\Cdn\Hosting::configured(),
             'usage'       => \App\Cdn\Hosting::usage(),
-            'crons'       => \App\Cdn\Hosting::crons(),
+            'crons'       => $crons = \App\Cdn\Hosting::crons(),
+
+            # Why the list is missing, when it is. "It did not answer", with
+            # nothing under it, is the message that helps with nothing.
+            'cronError'   => $crons === null ? \App\Cdn\Hosting::lastError() : null,
             'command'     => \App\Cdn\Hosting::command(),
         ]);
     }

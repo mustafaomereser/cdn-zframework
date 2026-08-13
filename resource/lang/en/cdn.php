@@ -29,6 +29,7 @@ return [
     ],
 
     'cpanel' => [
+        'no-crons-answer'     => 'The account answered, but the cron list did not come back. The token needs the cron permission - a token created with a restricted scope can read the usage numbers and still not be allowed near the crontab.',
         'testing'             => 'Asking cPanel…',
         'no-route'            => 'This panel does not know that address yet. The route table is cached: run `php terminal route cache` again, or clear it.',
         'test'                => 'Test the connection',

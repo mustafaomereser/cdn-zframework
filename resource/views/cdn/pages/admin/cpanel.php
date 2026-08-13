@@ -156,7 +156,13 @@
         <?php if (!$configured) : ?>
             <p class="hint mb-0">{{ _l('cdn.cpanel.not-connected') }}</p>
         <?php elseif ($crons === null) : ?>
-            <div class="alert alert-warning small mb-0">{{ _l('cdn.cpanel.no-answer') }}</div>
+            <div class="alert alert-warning small mb-0">
+                {{ _l('cdn.cpanel.no-crons-answer') }}
+
+                <?php if ($cronError) : ?>
+                    <div class="mono mt-2 small text-break"><?= e((string) $cronError, false) ?></div>
+                <?php endif ?>
+            </div>
         <?php else : ?>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
