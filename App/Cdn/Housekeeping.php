@@ -151,6 +151,16 @@ class Housekeeping
     }
 
     /**
+     * The day the daily work last ran, for the page that says so.
+     *
+     * @return string|null
+     */
+    public static function lastDaily(): ?string
+    {
+        return self::state()['daily'] ?? null;
+    }
+
+    /**
      * The little that has to be remembered between runs: the day the daily work
      * last ran, and when each task last did anything.
      *

@@ -193,32 +193,44 @@ class OperatorController
      */
     public function system(): mixed
     {
-        $disks = [];
-
-        foreach ((array) Support::config('storage.disks', []) as $name => $disk) {
-            $disks[$name] = [
-                'root'     => $disk['root'] ?? null,
-                'writable' => is_dir($disk['root'] ?? '') ? is_writable($disk['root']) : null,
-                'free'     => Storage::freeSpace($name),
-            ];
-        }
-
         return view('cdn.pages.admin.system', [
-            'totals'   => Operator::totals(),
-            'tasks'    => array_keys(\App\Cdn\Housekeeping::tasks()),
-            'lastRun'  => \App\Cdn\Housekeeping::lastRun(),
-            'disks'    => $disks,
-            'variants' => Storage::measure(Storage::variantRoot()),
+            'totals'     => Operator::totals(),
+            'info'       => \App\Cdn\System::info(),
+            'extensions' => \App\Cdn\System::extensions(),
+            'disks'      => \App\Cdn\System::disks(),
+            'variants'   => Storage::measure(Storage::variantRoot()),
             'capabilities' => [
                 'driver'  => Transform::driver(),
                 'formats' => array_combine(
                     ['jpg', 'png', 'gif', 'webp', 'avif'],
                     array_map(fn($format) => Transform::supports($format), ['jpg', 'png', 'gif', 'webp', 'avif'])
                 ),
-                'apcu'  => function_exists('apcu_fetch'),
-                'redis' => \zFramework\Core\Facades\Redis::available('cache'),
-                'finfo' => class_exists('finfo'),
             ],
+        ]);
+    }
+
+    /**
+     * The housekeeping page: what runs, when it last ran, and what it would
+     * free if it ran now.
+     *
+     * @return mixed
+     */
+    public function maintenance(): mixed
+    {
+        $db = new \zFramework\Core\Facades\DB;
+
+        $orphans = $db->prepare('SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM cdn_objects WHERE refs <= 0')
+            ->fetch(\PDO::FETCH_ASSOC) ?: ['count' => 0, 'bytes' => 0];
+
+        $logRows = (int) (($db->prepare('SELECT COUNT(*) AS count FROM cdn_access_logs')->fetch(\PDO::FETCH_ASSOC))['count'] ?? 0);
+
+        return view('cdn.pages.admin.maintenance', [
+            'tasks'    => array_keys(\App\Cdn\Housekeeping::tasks()),
+            'lastRun'  => \App\Cdn\Housekeeping::lastRun(),
+            'daily'    => \App\Cdn\Housekeeping::lastDaily(),
+            'variants' => Storage::measure(Storage::variantRoot()),
+            'orphans'  => ['count' => (int) $orphans['count'], 'bytes' => (int) $orphans['bytes']],
+            'logRows'  => $logRows,
         ]);
     }
 
@@ -232,7 +244,7 @@ class OperatorController
      *
      * @return mixed
      */
-    public function maintenance(): mixed
+    public function maintenanceRun(): mixed
     {
         $only = (string) request('task');
         $only = $only !== '' && isset(\App\Cdn\Housekeeping::tasks()[$only]) ? $only : null;

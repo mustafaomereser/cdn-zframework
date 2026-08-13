@@ -555,7 +555,8 @@ in the sidebar — with four pages, and a fifth when the console is on:
 | Accounts | everybody with an account and what they use. Each one opens: its projects with bucket and file counts, its recent files, its allowance, suspend with a reason, promote, delete |
 | Projects | every project, whoever owns it. Each one opens: its buckets, its recent files, the per-project quota override, suspend, reset this month |
 | Files | every file in the installation, searchable, each row saying which bucket and which project |
-| Installation | what this machine can actually do (image engine, formats, cache, finfo), disks and free space — and a button for each housekeeping task, with when it last ran |
+| Server | what the machine is: PHP version and its limits, opcache, web server, processors, load, uptime, RAM, database version, the extensions this application asks for, and every directory it writes to with what it holds and what is left on the volume |
+| Maintenance | the hourly cron's tasks, one button each, when each last ran, and what there is to reclaim right now |
 | Log | who changed what, with the numbers before and after |
 | Console | run `php cdn` and `php terminal` commands — off by default, see below |
 

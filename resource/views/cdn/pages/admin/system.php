@@ -5,42 +5,49 @@
 @section('body')
 <?php include(BASE_PATH . '/resource/views/cdn/partials/operator-nav.php') ?>
 
+<?php
+/**
+ * What the machine is, read fresh on every render.
+ *
+ * A row whose value is null is a figure this platform does not have - Windows
+ * has no load average, a container may have no /proc/meminfo - and it says so
+ * rather than showing a zero somebody would act on.
+ */
+$row = function (string $key, ?string $value, bool $mono = true): string {
+    $shown = $value === null || $value === '' ? '—' : $value;
+
+    return '<div class="d-flex justify-content-between small py-1 border-bottom">'
+        . '<span class="hint">' . _l("cdn.system.$key") . '</span>'
+        . '<span class="' . ($mono ? 'mono ' : '') . 'notranslate text-end" translate="no">' . e($shown, false) . '</span>'
+        . '</div>';
+};
+?>
+
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h6>{{ _l('cdn.operator.capabilities') }}</h6>
-                <p class="hint">{{ _l('cdn.operator.capabilities-lede') }}</p>
+                <h6>{{ _l('cdn.system.php') }}</h6>
+                <p class="hint">{{ _l('cdn.system.php-lede') }}</p>
 
-                <dl class="row small mb-0">
-                    <dt class="col-5 hint">{{ _l('cdn.operator.image-engine') }}</dt>
-                    <dd class="col-7">
-                        <?php if ($capabilities['driver'] === 'none') : ?>
-                            <span class="badge text-bg-danger notranslate" translate="no">none</span>
-                            <div class="hint">{{ _l('cdn.operator.no-engine') }}</div>
-                        <?php else : ?>
-                            <span class="badge text-bg-success notranslate" translate="no"><?= $capabilities['driver'] ?></span>
-                        <?php endif ?>
-                    </dd>
+                <?php foreach ($info['php'] as $key => $value) : ?>
+                    <?= $row('php-' . $key, $value === null ? null : (string) $value) ?>
+                <?php endforeach ?>
+            </div>
+        </div>
 
-                    <dt class="col-5 hint">{{ _l('cdn.operator.can-write') }}</dt>
-                    <dd class="col-7">
-                        <?php foreach ($capabilities['formats'] as $format => $supported) : ?>
-                            <span class="badge text-bg-<?= $supported ? 'success' : 'secondary' ?> notranslate" translate="no"><?= $format ?></span>
-                        <?php endforeach ?>
-                    </dd>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6>{{ _l('cdn.system.memory') }}</h6>
+                <p class="hint">{{ _l('cdn.system.memory-lede') }}</p>
 
-                    <dt class="col-5 hint">{{ _l('cdn.operator.shared-cache') }}</dt>
-                    <dd class="col-7 notranslate" translate="no">
-                        <span class="badge text-bg-<?= $capabilities['redis'] ? 'success' : 'secondary' ?>">redis</span>
-                        <span class="badge text-bg-<?= $capabilities['apcu'] ? 'success' : 'secondary' ?>">apcu</span>
-                    </dd>
+                <?php foreach ($info['memory'] as $key => $value) : ?>
+                    <?= $row('mem-' . $key, $value === null ? null : (string) $value) ?>
+                <?php endforeach ?>
 
-                    <dt class="col-5 hint">{{ _l('cdn.operator.sniffing') }}</dt>
-                    <dd class="col-7 notranslate" translate="no">
-                        <span class="badge text-bg-<?= $capabilities['finfo'] ? 'success' : 'danger' ?>">finfo</span>
-                    </dd>
-                </dl>
+                <?php if (!isset($info['memory']['total'])) : ?>
+                    <div class="hint small mt-2">{{ _l('cdn.system.memory-unavailable') }}</div>
+                <?php endif ?>
             </div>
         </div>
     </div>
@@ -48,87 +55,106 @@
     <div class="col-lg-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h6>{{ _l('cdn.operator.disks') }}</h6>
-                <p class="hint">{{ _l('cdn.operator.disks-lede') }}</p>
+                <h6>{{ _l('cdn.system.server') }}</h6>
+                <p class="hint">{{ _l('cdn.system.server-lede') }}</p>
 
-                <?php foreach ($disks as $name => $disk) : ?>
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span class="mono truncate notranslate" translate="no" title="<?= e((string) $disk['root'], false) ?>"><?= e((string) $name, false) ?></span>
-                        <span class="text-nowrap">
-                            <?php if ($disk['writable'] === false) : ?>
-                                <span class="badge text-bg-danger">{{ _l('cdn.operator.not-writable') }}</span>
-                            <?php endif ?>
-                            <?php if ($disk['free'] !== null) : ?>
-                                <span class="notranslate" translate="no">{{ File::humanFileSize($disk['free']) }}</span> {{ _l('cdn.operator.free') }}
-                            <?php endif ?>
-                        </span>
-                    </div>
+                <?php foreach ($info['server'] as $key => $value) : ?>
+                    <?= $row('srv-' . $key, $value === null ? null : (string) $value) ?>
                 <?php endforeach ?>
 
-                <hr>
+                <?= $row('db-version', $info['db']['version'] ?? null) ?>
+            </div>
+        </div>
 
-                <div class="d-flex justify-content-between small">
-                    <span class="hint">{{ _l('cdn.operator.generated-images') }}</span>
-                    <span class="notranslate" translate="no">
-                        {{ number_format($variants['files']) }} · {{ File::humanFileSize($variants['bytes']) }}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6>{{ _l('cdn.system.capabilities') }}</h6>
+                <p class="hint">{{ _l('cdn.operator.capabilities-lede') }}</p>
+
+                <div class="d-flex justify-content-between small py-1 border-bottom">
+                    <span class="hint">{{ _l('cdn.operator.image-engine') }}</span>
+                    <span>
+                        <?php if ($capabilities['driver'] === 'none') : ?>
+                            <span class="badge text-bg-danger notranslate" translate="no">none</span>
+                        <?php else : ?>
+                            <span class="badge text-bg-success notranslate" translate="no"><?= $capabilities['driver'] ?></span>
+                        <?php endif ?>
                     </span>
                 </div>
 
-                <div class="d-flex justify-content-between small mt-1">
-                    <span class="hint">{{ _l('cdn.operator.total-stored') }}</span>
-                    <span class="notranslate" translate="no">{{ File::humanFileSize($totals['storage']) }}</span>
+                <div class="d-flex justify-content-between small py-1 border-bottom">
+                    <span class="hint">{{ _l('cdn.operator.can-write') }}</span>
+                    <span class="text-end">
+                        <?php foreach ($capabilities['formats'] as $format => $supported) : ?>
+                            <span class="badge text-bg-<?= $supported ? 'success' : 'secondary' ?> notranslate" translate="no"><?= $format ?></span>
+                        <?php endforeach ?>
+                    </span>
                 </div>
 
-                <div class="d-flex justify-content-between small mt-1">
-                    <span class="hint">{{ _l('cdn.operator.suspended-projects') }}</span>
-                    <span class="notranslate" translate="no">{{ number_format($totals['suspended']) }}</span>
+                <?php # Only what something here asks for. The full list is a
+                      # hundred rows nobody reads; a missing one of these
+                      # explains a feature that is not working. ?>
+                <div class="mt-2">
+                    <div class="hint small mb-1">{{ _l('cdn.system.extensions') }}</div>
+                    <?php foreach ($extensions as $name => $loaded) : ?>
+                        <span class="badge text-bg-<?= $loaded ? 'success' : 'secondary' ?> notranslate" translate="no"><?= $name ?></span>
+                    <?php endforeach ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<?php # The hourly cron's work, with a button on it. For the host where nobody
-      # set up a crontab, and for the day somebody wants the disk back now
-      # rather than at the top of the hour. ?>
 <div class="card">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
-            <div>
-                <h6 class="mb-1">{{ _l('cdn.operator.maintenance') }}</h6>
-                <p class="hint mb-0">{{ _l('cdn.operator.maintenance-lede') }}</p>
-            </div>
-
-            <form method="POST" action="{{ route('cdn-admin.operator.system.run') }}">
-                <?= csrf() ?>
-                <button class="btn btn-sm btn-primary text-nowrap">
-                    <i class="bi bi-play-fill"></i> {{ _l('cdn.operator.run-all') }}
-                </button>
-            </form>
-        </div>
+        <h6>{{ _l('cdn.operator.disks') }}</h6>
+        <p class="hint">{{ _l('cdn.system.disks-lede') }}</p>
 
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>{{ _l('cdn.system.disk') }}</th>
+                        <th class="text-end">{{ _l('cdn.system.holds') }}</th>
+                        <th class="text-end">{{ _l('cdn.operator.free') }}</th>
+                        <th class="text-end">{{ _l('cdn.system.total') }}</th>
+                        <th style="width: 160px"></th>
+                    </tr>
+                </thead>
                 <tbody>
-                    <?php foreach ($tasks as $task) : ?>
+                    <?php foreach ($disks as $name => $disk) : ?>
                         <tr>
                             <td>
-                                <div><?= _l("cdn.operator.task-$task") ?></div>
-                                <div class="hint"><?= _l("cdn.operator.task-$task-help") ?></div>
+                                <div class="notranslate" translate="no"><?= e((string) $name, false) ?></div>
+                                <div class="hint"><?= _l('cdn.system.role-' . $disk['role']) ?></div>
+                                <div class="hint mono truncate notranslate" translate="no"><?= e((string) $disk['root'], false) ?></div>
+
+                                <?php if (!$disk['exists']) : ?>
+                                    <span class="badge text-bg-danger">{{ _l('cdn.system.missing') }}</span>
+                                <?php elseif ($disk['writable'] === false) : ?>
+                                    <span class="badge text-bg-danger">{{ _l('cdn.operator.not-writable') }}</span>
+                                <?php endif ?>
                             </td>
 
-                            <td class="text-end hint small text-nowrap notranslate" translate="no">
-                                <?= $lastRun[$task] ?: '—' ?>
+                            <td class="text-end small notranslate" translate="no">
+                                <?= $disk['used'] === null ? '—' : File::humanFileSize($disk['used']) ?>
                             </td>
 
-                            <td class="text-end" style="width: 1%">
-                                <form method="POST" action="{{ route('cdn-admin.operator.system.run') }}">
-                                    <?= csrf() ?>
-                                    <input type="hidden" name="task" value="<?= $task ?>">
-                                    <button class="btn btn-sm btn-outline-secondary text-nowrap">
-                                        {{ _l('cdn.operator.run') }}
-                                    </button>
-                                </form>
+                            <td class="text-end small notranslate" translate="no">
+                                <?= $disk['free'] === null ? '—' : File::humanFileSize($disk['free']) ?>
+                            </td>
+
+                            <td class="text-end small notranslate" translate="no">
+                                <?= $disk['total'] === null ? '—' : File::humanFileSize($disk['total']) ?>
+                            </td>
+
+                            <td>
+                                <?php if ($disk['share'] !== null) : ?>
+                                    <div class="quota <?= $disk['share'] >= 95 ? 'full' : ($disk['share'] >= 85 ? 'warn' : '') ?>">
+                                        <div style="width: <?= $disk['share'] ?>%"></div>
+                                    </div>
+                                    <div class="hint small text-end notranslate" translate="no"><?= $disk['share'] ?>%</div>
+                                <?php endif ?>
                             </td>
                         </tr>
                     <?php endforeach ?>
@@ -136,7 +162,22 @@
             </table>
         </div>
 
-        <p class="hint small mt-2 mb-0">{{ _l('cdn.operator.maintenance-cron') }}</p>
+        <div class="d-flex justify-content-between small mt-3">
+            <span class="hint">{{ _l('cdn.operator.generated-images') }}</span>
+            <span class="notranslate" translate="no">
+                {{ number_format($variants['files']) }} · {{ File::humanFileSize($variants['bytes']) }}
+            </span>
+        </div>
+
+        <div class="d-flex justify-content-between small mt-1">
+            <span class="hint">{{ _l('cdn.operator.total-stored') }}</span>
+            <span class="notranslate" translate="no">{{ File::humanFileSize($totals['storage']) }}</span>
+        </div>
+
+        <div class="d-flex justify-content-between small mt-1">
+            <span class="hint">{{ _l('cdn.operator.suspended-projects') }}</span>
+            <span class="notranslate" translate="no">{{ number_format($totals['suspended']) }}</span>
+        </div>
     </div>
 </div>
 @endsection

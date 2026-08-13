@@ -18,7 +18,8 @@ $navTabs = [
     'cdn-admin.operator.users'    => ['bi-people',   'users'],
     'cdn-admin.operator.projects' => ['bi-boxes',    'projects'],
     'cdn-admin.operator.files'    => ['bi-file-earmark', 'files'],
-    'cdn-admin.operator.system'   => ['bi-cpu',      'system'],
+    'cdn-admin.operator.system'      => ['bi-cpu',       'system'],
+    'cdn-admin.operator.maintenance' => ['bi-tools',     'maintenance'],
     'cdn-admin.operator.audits'   => ['bi-list-ul',  'audits'],
 ];
 
