@@ -61,6 +61,22 @@ class Uploader
 
         if ($mime === '') $mime = Support::mime($path);
 
+        # finfo cannot tell a stylesheet from a script from a shopping list -
+        # all three are text/plain - and a stylesheet served as text/plain is a
+        # stylesheet the browser refuses to apply. Where the bytes are plain
+        # text and the extension names something more specific, the extension
+        # wins.
+        #
+        # This does not reopen what sniffing is for. The case that matters is a
+        # .png whose bytes are html, and those bytes sniff as text/html, not as
+        # text/plain - so they never reach this. Nothing here can promote a file
+        # to a type a browser will execute in this origin.
+        $textual = ['css', 'js', 'mjs', 'json', 'xml', 'csv', 'md', 'txt'];
+
+        if (in_array($mime, ['text/plain', 'application/octet-stream'], true) && in_array($extension, $textual, true)) {
+            $mime = Support::mime($path, $mime);
+        }
+
         if ($reason = Guard::acceptable($bucket, $mime, $extension)) {
             @unlink($source);
             return ['ok' => false, 'error' => $reason];

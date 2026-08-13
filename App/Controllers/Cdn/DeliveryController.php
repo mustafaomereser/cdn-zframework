@@ -5,6 +5,7 @@ namespace App\Controllers\Cdn;
 use App\Cdn\Delivery;
 use App\Cdn\Guard;
 use App\Cdn\Metrics;
+use App\Cdn\Minifier;
 use App\Cdn\Origin;
 use App\Cdn\Registry;
 use App\Cdn\Signature;
@@ -137,6 +138,27 @@ class DeliveryController
                 # The chosen format depends on Accept when auto-format picked it,
                 # so any cache in front has to key on that header too.
                 'vary'     => isset($_GET['format']) ? [] : ['Accept'],
+            ]);
+        }
+
+        # The same idea for text: a minified stylesheet is a variant of a file
+        # the way a thumbnail is. Nothing here changes the stored object, so a
+        # minifier that mangles a file costs one query parameter, not an upload.
+        if (Minifier::wanted($file, $bucketRow) && ($variant = Minifier::resolve($file, $bucketRow))) {
+            $row = $variant['row'];
+
+            Metrics::variantHit((int) $row['id']);
+
+            $this->log($bucketRow, $file, $path, 200, $variant['built'] ? 'minified' : 'hit', $started, (string) $row['signature']);
+
+            Delivery::send($options + [
+                'path'     => Storage::variantAbsolute($row['storage_path']),
+                'mime'     => $row['mime'] ?: $file['mime'],
+                'size'     => (int) $row['size'],
+                'etag'     => $row['etag'] ?: '"' . substr($row['signature'], 0, 32) . '"',
+                'modified' => strtotime($row['created_at'] ?? 'now'),
+                'cache'    => $variant['built'] ? 'MISS' : 'HIT',
+                'variant'  => $row['signature'],
             ]);
         }
 

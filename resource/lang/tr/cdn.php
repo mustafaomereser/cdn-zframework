@@ -242,6 +242,8 @@ return [
 
         'show' => [
             'title'      => 'Dosya',
+            'minified'    => 'Küçültülmüş hâli {size} — {saved} daha az, %{share}.',
+            'minify-hint' => 'Bu bucket varsayılan olarak orijinali sunuyor. Küçük hâlini düz adreste sunmak için bucket ayarlarındaki "CSS ve JS küçült" seçeneğini aç.',
             'lede'       => 'Aşağıdaki adres dosyanın kendisi. Sorgu dizesini değiştirdiğinde servis edilen de değişir.',
             'signed-note' => 'Bu bucket imzalı adres istiyor, yani yukarıdaki bağlantı bir saat sonra geçersiz olur. Yenilerini API\'den üret, ya da dosyalar hassas değilse bucket\'ı herkese açık yap.',
             'stored-at'  => 'Konumu',
@@ -299,6 +301,8 @@ return [
             'signed-help'  => 'Faturalar, özel belgeler, ücretli indirmeler için.',
             'private'      => 'Hiç kimse — yalnızca API',
             'private-help' => 'Herkese açık kapısı olmayan depolama.',
+            'minify'       => "CSS ve JS'i küçült",
+            'minify-help'  => 'Stil ve script dosyaları küçültülmüş hâlde sunulur. Yüklenen dosyaya dokunulmaz — adresin sonuna <code>?min=0</code> ekleyerek orijinali görebilirsin.',
             'transform'    => 'Adresten görsel boyutlandırmaya izin ver',
             'transform-help' => '<code>?w=400</code> ve benzerlerinin çalışmasını sağlar. Görsel tutmayan bucket\'larda kapat.',
 

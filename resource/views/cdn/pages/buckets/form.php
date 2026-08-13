@@ -104,6 +104,15 @@
                     <div class="hint">Lets <code>?w=400</code> and friends work. Turn off for buckets that hold no images.</div>
                 </label>
             </div>
+
+            <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="minify" value="1" id="minify"
+                       {{ !empty($bucket['minify']) ? 'checked' : '' }}>
+                <label class="form-check-label" for="minify">
+                    <strong>{{ _l('cdn.buckets.form.minify') }}</strong>
+                    <div class="hint">{{ _l('cdn.buckets.form.minify-help') }}</div>
+                </label>
+            </div>
         </div>
     </div>
 

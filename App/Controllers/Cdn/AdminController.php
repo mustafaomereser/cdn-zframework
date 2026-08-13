@@ -121,6 +121,11 @@ class AdminController
             'project'  => Tenant::projectOf($bucket),
             'variants' => $variants,
             'url'      => $this->url($bucket, $file['path']),
+
+            # Built here rather than estimated: a number somebody plans a
+            # release around should be the real one. Null for anything that is
+            # not css or js, and for a file minifying does not shrink.
+            'minified' => \App\Cdn\Minifier::saving($file, $bucket),
         ]);
     }
 
@@ -247,6 +252,7 @@ class AdminController
             'visibility'    => in_array(request('visibility'), ['public', 'signed', 'private'], true) ? request('visibility') : 'public',
             'cache_ttl'     => max(0, (int) request('cache_ttl')),
             'transform'     => request('transform') ? 1 : 0,
+            'minify'        => request('minify') ? 1 : 0,
             'immutable'     => request('immutable') ? 1 : 0,
             'signed_only'   => request('signed_only') ? 1 : 0,
             'max_file_size' => max(0, (int) request('max_file_size')),

@@ -183,6 +183,31 @@ return [
     ],
 
     /**
+     * Minifying css and js.
+     *
+     * A minified file is a derivative, like a resized image: same table, same
+     * storage, same purge. The uploaded object is never touched - it is what
+     * the hash addresses and what gets served when a minifier mangles a file,
+     * which is a thing minifiers do.
+     *
+     * auto        Minify without being asked. Per-bucket `minify` overrides it;
+     *             `?min=1` and `?min=0` override both, which is what somebody
+     *             debugging a mangled file needs.
+     * max-size    Skip anything larger. A file this big is a bundle somebody
+     *             already built, and holding it plus its output in memory is
+     *             the part that hurts.
+     *
+     * Files already named `*.min.js` are skipped whatever this says.
+     */
+    'minify' => [
+        'enabled'      => true,
+        'auto'         => false,
+        'types'        => ['js', 'mjs', 'css'],
+        'max-size'     => 4 * 1024 * 1024,
+        'log-failures' => false,
+    ],
+
+    /**
      * Uploads.
      *
      * blocked-ext wins over allowed-ext. It is a denylist of things that

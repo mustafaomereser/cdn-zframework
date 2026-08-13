@@ -35,6 +35,37 @@
                 <img src="{{ $url }}" class="img-fluid border rounded" alt="{{ $file['name'] }}" style="max-height: 380px" id="preview">
                 @endif
 
+                <?php # css or js, and minifying it actually shrinks it. The
+                      # numbers are real - the minified copy was built to get
+                      # them - so this is what the bucket switch would serve. ?>
+                <?php if ($minified) : ?>
+                    <div class="minify-note">
+                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <span>
+                                <i class="bi bi-scissors"></i>
+                                <?= _l('cdn.files.show.minified', [
+                                    'size'  => File::humanFileSize($minified['size']),
+                                    'saved' => File::humanFileSize($minified['saved']),
+                                    'share' => $minified['share'],
+                                ]) ?>
+                            </span>
+
+                            <span class="text-nowrap">
+                                <button class="btn btn-sm btn-outline-secondary" data-copy="<?= $url ?>?min=1">
+                                    <i class="bi bi-clipboard"></i> ?min=1
+                                </button>
+                                <a class="btn btn-sm btn-outline-secondary" href="<?= $url ?>?min=1" target="_blank">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </span>
+                        </div>
+
+                        <?php if (empty($bucket['minify'])) : ?>
+                            <div class="hint mt-1"><?= _l('cdn.files.show.minify-hint') ?></div>
+                        <?php endif ?>
+                    </div>
+                <?php endif ?>
+
                 <dl class="row mb-0 mt-3 small">
                     <dt class="col-4 text-secondary">Stored at</dt>
                     <dd class="col-8 mono">{{ $bucket['slug'] }}/{{ $file['path'] }}</dd>

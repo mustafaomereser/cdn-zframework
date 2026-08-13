@@ -45,6 +45,11 @@ class CdnBuckets
             'cache_version' => ['int', 'default:1'],
 
             'transform'     => ['bool', 'default:1'],
+
+            # Serve css and js minified without being asked. Right for a bucket
+            # holding build output, wrong for one holding source somebody links
+            # to on purpose - so it is per bucket rather than per installation.
+            'minify'        => ['bool', 'default:0'],
             'signed_only'   => ['bool', 'default:0'],
 
             'allowed_mimes' => ['json', 'nullable'],

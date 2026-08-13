@@ -242,6 +242,8 @@ return [
 
         'show' => [
             'title'      => 'File',
+            'minified'    => 'Minified it is {size} — {saved} smaller, {share}%.',
+            'minify-hint' => 'This bucket serves the original by default. Turn on "Minify css and js" in the bucket settings to serve the smaller one at the plain URL.',
             'lede'       => 'The URL below is the file. Change the query string and you change what is served.',
             'signed-note' => 'This bucket needs signed URLs, so the link above expires in an hour. Generate fresh ones from the API, or make the bucket public if the files are not sensitive.',
             'stored-at'  => 'Stored at',
@@ -299,6 +301,8 @@ return [
             'signed-help'  => 'For invoices, private documents, paid downloads.',
             'private'      => 'Nobody — API access only',
             'private-help' => 'Storage with no public door at all.',
+            'minify'       => 'Minify css and js',
+            'minify-help'  => 'Serve stylesheets and scripts minified. The uploaded file is untouched — add <code>?min=0</code> to any URL to see the original.',
             'transform'    => 'Allow resizing images from the URL',
             'transform-help' => 'Lets <code>?w=400</code> and friends work. Turn off for buckets that hold no images.',
 
