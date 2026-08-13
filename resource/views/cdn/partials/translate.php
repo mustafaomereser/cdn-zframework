@@ -87,6 +87,26 @@ $native = array_values(array_intersect(Lang::list(), ['en', 'tr']));
 
         const cdnLocale  = '<?= $current ?>';
         const cdnEnglish = '<?= route('language', ['lang' => 'en']) ?>';
+        const cdnWanted  = localStorage.getItem('cdn-translate');
+
+        // The request goes out here rather than on DOMContentLoaded: this runs
+        // while the rest of the body is still parsing, which is the earliest it
+        // can be in flight - and the time it is in flight is the time the page
+        // is still in English.
+        //
+        // The page is not hidden while it waits. That was tried: it traded a
+        // brief flip for up to three seconds of blank screen, and a blank screen
+        // reads as a slow application rather than as a careful one.
+        if (cdnWanted && cdnLocale === 'en') {
+            ['https://translate.googleapis.com', 'https://translate-pa.googleapis.com', 'https://translate.google.com']
+                .forEach(function (origin) {
+                    const link = document.createElement('link');
+                    link.rel = 'preconnect';
+                    link.href = origin;
+                    link.crossOrigin = '';
+                    document.head.appendChild(link);
+                });
+        }
 
         function googleTranslateElementInit() {
             // Always English: the page is switched to it before any machine
@@ -110,8 +130,12 @@ $native = array_values(array_intersect(Lang::list(), ['en', 'tr']));
             script.id  = 'cdn-gtranslate';
             script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
 
-            document.body.appendChild(script);
+            (document.body || document.head).appendChild(script);
         }
+
+        // Known before the document is finished, so the script is requested now
+        // rather than after DOMContentLoaded.
+        if (cdnWanted && cdnLocale === 'en') cdnLoadWidget();
 
         function cdnTranslate(language) {
             localStorage.setItem('cdn-translate', language);
@@ -196,23 +220,16 @@ $native = array_values(array_intersect(Lang::list(), ['en', 'tr']));
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            const saved = localStorage.getItem('cdn-translate');
-
             // Nothing chosen: make sure a leftover cookie cannot translate the
             // page behind our back.
-            if (!saved) return cdnForgetCookie();
+            if (!cdnWanted) return cdnForgetCookie();
 
             if (cdnLocale !== 'en') return window.location = cdnEnglish;
 
-            // Marked immediately so the menu is right while the widget is still
-            // loading, then again by cdnApply once it has actually taken.
-            cdnMarkActive(saved);
-            cdnLoadWidget();
-
-            // Given a moment to restore its own cookie first: if it does, the
-            // check inside cdnApply finds the value already set and leaves the
-            // page alone rather than translating it a second time.
-            setTimeout(function () { cdnApply(saved); }, 1200);
+            // The script was already requested above; this only marks the menu
+            // and nudges the widget if its own cookie did not restore.
+            cdnMarkActive(cdnWanted);
+            cdnApply(cdnWanted);
         });
     </script>
 
@@ -221,5 +238,6 @@ $native = array_values(array_intersect(Lang::list(), ['en', 'tr']));
            told not to show. */
         body { top: 0 !important; }
         .skiptranslate, .VIpgJd-ZVi9od-ORHb, .VIpgJd-ZVi9od-ORHb-OEVmcd { display: none !important; }
+
     </style>
 <?php endif ?>
