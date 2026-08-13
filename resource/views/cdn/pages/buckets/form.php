@@ -14,7 +14,7 @@
             <?php
             # An existing bucket keeps its project: moving one would change every
             # url it serves, which is a different operation from editing it.
-            $current = isset($bucket['project_id'])
+            $formProject = isset($bucket['project_id'])
                 ? Tenant::projectOf($bucket)
                 : $projects[0];
             ?>
@@ -30,8 +30,8 @@
                     <label class="form-label">{{ _l('cdn.common.project') }}</label>
 
                     <?php if (isset($bucket['id']) || count($projects) < 2) : ?>
-                        <input class="form-control" value="<?= e($current['name'], false) ?>" disabled>
-                        <input type="hidden" name="project" value="<?= $current['id'] ?>">
+                        <input class="form-control" value="<?= e($formProject['name'], false) ?>" disabled>
+                        <input type="hidden" name="project" value="<?= $formProject['id'] ?>">
                         <div class="form-text">
                             <?= isset($bucket['id'])
                                 ? 'A bucket cannot move — its project is in every URL it serves.'
@@ -50,7 +50,7 @@
                 <div class="col-12">
                     <label class="form-label">{{ _l('cdn.buckets.form.url') }}</label>
                     <div class="input-group">
-                        <span class="input-group-text mono notranslate" translate="no" id="url-prefix">/cdn/<?= $current['slug'] ?>/</span>
+                        <span class="input-group-text mono notranslate" translate="no" id="url-prefix">/cdn/<?= $formProject['slug'] ?>/</span>
                         <input name="slug" class="form-control mono" value="{{ $bucket['slug'] ?? '' }}" placeholder="{{ _l('cdn.buckets.form.url-holder') }}" required>
                     </div>
                     <div class="form-text">

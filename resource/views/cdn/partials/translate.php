@@ -20,101 +20,107 @@
  * command, so anything that must survive intact is marked translate="no"
  * before it loads.
  *
- * @var string $area 'public' or 'panel'
+ * Every variable in here is prefixed. The compiler splices layout, partials and
+ * page into one file and this partial runs in the layout's nav - before the
+ * page body - so a plain $name or $code would still be holding the last
+ * language in the list by the time the page used its own. That is not a
+ * hypothetical: it is why a page asked to build German built Japanese.
+ *
+ * @var string $langArea 'public' or 'panel'
  */
 
 use App\Cdn\Locale;
 use zFramework\Core\Facades\Lang;
 
-$area    ??= 'public';
-$current  = Lang::currentLocale();
-$widget   = (bool) (config('cdn.i18n.translate-widget')[$area] ?? false);
+$langArea    ??= 'public';
+$langCurrent  = Lang::currentLocale();
+$langWidget   = (bool) (config('cdn.i18n.translate-widget')[$langArea] ?? false);
 
-$hand    = Locale::native();
-$build   = Locale::buildable();
+$langHand    = Locale::native();
+$langBuild   = Locale::buildable();
 
-$native = $machine = $missing = $fallback = [];
+$langNative = $langMachine = $langMissing = $langFallback = [];
 
-foreach (Locale::names() as $code => $name) {
-    if (Locale::ready($code)) {
-        if (in_array($code, $hand, true)) $native[$code] = $name;
-        else                              $machine[$code] = $name;
+foreach (Locale::names() as $langCode => $langName) {
+    if (Locale::ready($langCode)) {
+        if (in_array($langCode, $langHand, true)) $langNative[$langCode] = $langName;
+        else                              $langMachine[$langCode] = $langName;
 
         continue;
     }
 
     # No file. Offered anyway when it can be built - and when it cannot, only
     # if the widget is there to render it in the browser instead.
-    if ($build && !in_array($code, $hand, true)) $missing[$code] = $name;
-    elseif ($widget)                             $fallback[$code] = $name;
+    if ($langBuild && !in_array($langCode, $langHand, true)) $langMissing[$langCode] = $langName;
+    elseif ($langWidget)                             $langFallback[$langCode] = $langName;
 }
 
 # Where to come back to once it is built. The switcher is on every page, so
 # this is whichever one they were reading.
-$here = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+$langHere = (string) ($_SERVER['REQUEST_URI'] ?? '/');
 ?>
 
 <div class="lang-menu dropdown">
     <button class="lang-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
         <i class="bi bi-translate"></i>
-        <span class="notranslate" translate="no" id="lang-current"><?= strtoupper($current) ?></span>
+        <span class="notranslate" translate="no" id="lang-current"><?= strtoupper($langCurrent) ?></span>
     </button>
 
     <div class="dropdown-menu dropdown-menu-end lang-list">
         <?php # The href works with javascript off; with it on, the handler
               # clears any leftover widget cookie first and navigates itself,
               # so a reload cannot arrive before the cookie is gone. ?>
-        <?php foreach ($native as $code => $name) : ?>
-            <a class="dropdown-item <?= $code === $current ? 'active' : '' ?>" data-lang="<?= $code ?>"
-               href="<?= route('language', ['lang' => $code]) ?>"
+        <?php foreach ($langNative as $langCode => $langName) : ?>
+            <a class="dropdown-item <?= $langCode === $langCurrent ? 'active' : '' ?>" data-lang="<?= $langCode ?>"
+               href="<?= route('language', ['lang' => $langCode]) ?>"
                onclick="return cdnNative(this.href)">
-                <span class="notranslate" translate="no"><?= $name ?></span>
-                <i class="bi bi-check2 ms-auto lang-tick <?= $code === $current ? '' : 'd-none' ?>"></i>
+                <span class="notranslate" translate="no"><?= $langName ?></span>
+                <i class="bi bi-check2 ms-auto lang-tick <?= $langCode === $langCurrent ? '' : 'd-none' ?>"></i>
             </a>
         <?php endforeach ?>
 
-        <?php if (count($machine)) : ?>
+        <?php if (count($langMachine)) : ?>
             <div class="dropdown-divider"></div>
             <div class="lang-note"><?= _l('cdn.common.translated') ?></div>
 
             <?php # Also a plain reload. These are files like the ones above -
                   # the only difference is who wrote the first draft. ?>
-            <?php foreach ($machine as $code => $name) : ?>
-                <a class="dropdown-item <?= $code === $current ? 'active' : '' ?>" data-lang="<?= $code ?>"
-                   href="<?= route('language', ['lang' => $code]) ?>"
+            <?php foreach ($langMachine as $langCode => $langName) : ?>
+                <a class="dropdown-item <?= $langCode === $langCurrent ? 'active' : '' ?>" data-lang="<?= $langCode ?>"
+                   href="<?= route('language', ['lang' => $langCode]) ?>"
                    onclick="return cdnNative(this.href)">
-                    <span class="notranslate" translate="no"><?= $name ?></span>
-                    <i class="bi bi-check2 ms-auto lang-tick <?= $code === $current ? '' : 'd-none' ?>"></i>
+                    <span class="notranslate" translate="no"><?= $langName ?></span>
+                    <i class="bi bi-check2 ms-auto lang-tick <?= $langCode === $langCurrent ? '' : 'd-none' ?>"></i>
                 </a>
             <?php endforeach ?>
         <?php endif ?>
 
-        <?php if (count($missing)) : ?>
+        <?php if (count($langMissing)) : ?>
             <div class="dropdown-divider"></div>
             <div class="lang-note"><?= _l('cdn.language.build') ?></div>
 
             <?php # Not translated yet. Picking one starts it - which is a page
                   # with a bar on it for a minute, and then this language moves
                   # up into the group above and stays there. ?>
-            <?php foreach ($missing as $code => $name) : ?>
-                <a class="dropdown-item lang-build" data-lang="<?= $code ?>"
-                   href="<?= route('language.prepare', ['lang' => $code]) ?>?next=<?= urlencode($here) ?>">
-                    <span class="notranslate" translate="no"><?= $name ?></span>
+            <?php foreach ($langMissing as $langCode => $langName) : ?>
+                <a class="dropdown-item lang-build" data-lang="<?= $langCode ?>"
+                   href="<?= route('language.prepare', ['lang' => $langCode]) ?>?next=<?= urlencode($langHere) ?>">
+                    <span class="notranslate" translate="no"><?= $langName ?></span>
                     <i class="bi bi-download ms-auto"></i>
                 </a>
             <?php endforeach ?>
         <?php endif ?>
 
-        <?php if (count($fallback)) : ?>
+        <?php if (count($langFallback)) : ?>
             <div class="dropdown-divider"></div>
 
             <?php # Translated in the browser, on every page, every visit. The
                   # cure is `php cdn translate lang=<code>`, after which the
                   # language moves up into the list above. ?>
-            <?php foreach ($fallback as $code => $name) : ?>
-                <a class="dropdown-item notranslate" translate="no" data-lang="<?= $code ?>"
-                   href="javascript:void(0)" onclick="cdnTranslate('<?= $code ?>')">
-                    <?= $name ?>
+            <?php foreach ($langFallback as $langCode => $langName) : ?>
+                <a class="dropdown-item notranslate" translate="no" data-lang="<?= $langCode ?>"
+                   href="javascript:void(0)" onclick="cdnTranslate('<?= $langCode ?>')">
+                    <?= $langName ?>
                     <i class="bi bi-check2 ms-auto lang-tick d-none"></i>
                 </a>
             <?php endforeach ?>
@@ -122,7 +128,7 @@ $here = (string) ($_SERVER['REQUEST_URI'] ?? '/');
     </div>
 </div>
 
-<?php if ($widget) : ?>
+<?php if ($langWidget) : ?>
     <div id="google_translate_element" style="display: none"></div>
 
     <script>
@@ -138,7 +144,7 @@ $here = (string) ($_SERVER['REQUEST_URI'] ?? '/');
             });
         })();
 
-        const cdnLocale  = '<?= $current ?>';
+        const cdnLocale  = '<?= $langCurrent ?>';
         const cdnEnglish = '<?= route('language', ['lang' => 'en']) ?>';
         const cdnWanted  = localStorage.getItem('cdn-translate');
 

@@ -3,6 +3,10 @@
 /**
  * The tabs across the operator pages.
  *
+ * Prefixed variables, for the same reason the language switcher has them: this
+ * is spliced into the page rather than included in a scope of its own, so a
+ * plain $path or $key would be one the page might be using itself.
+ *
  * One file rather than a copy per page: they are the only navigation between
  * four pages that are otherwise unrelated, and a tab that exists on three of
  * them is worse than no tab at all.
@@ -10,26 +14,26 @@
 
 use App\Cdn\Runner;
 
-$tabs = [
+$navTabs = [
     'cdn-admin.operator.users'    => ['bi-people',   'users'],
     'cdn-admin.operator.projects' => ['bi-boxes',    'projects'],
     'cdn-admin.operator.system'   => ['bi-cpu',      'system'],
     'cdn-admin.operator.audits'   => ['bi-list-ul',  'audits'],
 ];
 
-if (Runner::enabled()) $tabs['cdn-admin.operator.console'] = ['bi-terminal', 'console'];
+if (Runner::enabled()) $navTabs['cdn-admin.operator.console'] = ['bi-terminal', 'console'];
 
-$path = uri();
+$navPath = uri();
 ?>
 
 <ul class="nav nav-pills op-tabs mb-3">
-    <?php foreach ($tabs as $route => [$icon, $key]) :
-        $target = parse_url(route($route), PHP_URL_PATH);
-        $active = rtrim($path, '/') === rtrim($target, '/');
+    <?php foreach ($navTabs as $navRoute => [$navIcon, $navKey]) :
+        $navTarget = parse_url(route($navRoute), PHP_URL_PATH);
+        $navActive = rtrim($navPath, '/') === rtrim($navTarget, '/');
     ?>
         <li class="nav-item">
-            <a class="nav-link <?= $active ? 'active' : '' ?>" href="<?= route($route) ?>">
-                <i class="bi <?= $icon ?>"></i> <?= _l("cdn.operator.$key") ?>
+            <a class="nav-link <?= $navActive ? 'active' : '' ?>" href="<?= route($navRoute) ?>">
+                <i class="bi <?= $navIcon ?>"></i> <?= _l("cdn.operator.$navKey") ?>
             </a>
         </li>
     <?php endforeach ?>
