@@ -199,6 +199,8 @@ pre code { background: none; padding: 0; }
 
 .sidebar .usage .row-line b { color: #e4e8ee; font-weight: 600; }
 .sidebar .usage .row-line .dim { color: #6b7688; font-size: .75rem; }
+.sidebar .usage .usage-scope { color: #7f95ff; font-size: .75rem; font-weight: 600; margin-bottom: 4px; }
+.sidebar .usage .usage-note { color: #6b7688; font-size: .6875rem; margin-top: 2px; }
 
 /* The switcher that replaced the project name in the sidebar. */
 .sidebar .project-switch { padding: 0 6px 14px; border-bottom: 1px solid #1d2330; margin-bottom: 12px; }

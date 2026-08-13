@@ -167,6 +167,40 @@ class Tenant
     }
 
     /**
+     * The same numbers, narrowed to whatever the switcher is pointing at.
+     *
+     * The sidebar reads this. With a project selected it shows that project -
+     * its bytes, and its own quota if it was given one - because everything
+     * else on the page is that project and a total that is not would be read as
+     * one that is. With "all projects" it is the account, which is what the
+     * bill is.
+     *
+     * @return array{used:int,quota:int,bandwidth:int,bandwidth-quota:int,scope:string}
+     */
+    public static function scopedUsage(): array
+    {
+        $project = self::selected();
+
+        if (!$project) return self::usage() + ['scope' => 'account'];
+
+        $custom  = ($project['quota_mode'] ?? 'account') === 'custom';
+        $account = self::usage();
+
+        return [
+            'used'            => (int) $project['storage_used'],
+            'bandwidth'       => ($project['bandwidth_period'] ?? null) === date('Y-m') ? (int) $project['bandwidth_used'] : 0,
+
+            # A project on the account's allowance shows the account's number:
+            # it is the ceiling it will actually hit, and showing a copy of it
+            # as though it were the project's own would say the account has one
+            # per project - which is exactly the thing that is not true.
+            'quota'           => $custom ? (int) $project['storage_quota'] : $account['quota'],
+            'bandwidth-quota' => $custom ? (int) $project['bandwidth_quota'] : $account['bandwidth-quota'],
+            'scope'           => $custom ? 'project' : 'shared',
+        ];
+    }
+
+    /**
      * Create a project for a user, with a first bucket unless that is turned
      * off - so the panel after registration has something in it rather than an
      * empty state and a form.

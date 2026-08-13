@@ -30,7 +30,10 @@ $operator = Tenant::isOperator();
 
 $current  = uri();
 $projects = Tenant::projects();
-$usage    = Tenant::usage();
+# Narrowed to the selected project, or the account when the switcher says all
+# of them - the panel below it is scoped the same way, and a total that is not
+# would be read as one that is.
+$usage    = Tenant::scopedUsage();
 
 $used  = $usage['used'];
 $quota = $usage['quota'];
@@ -114,6 +117,12 @@ $sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M')
             <hr>
 
             <div class="usage">
+                <?php if (($usage['scope'] ?? 'account') !== 'account') : ?>
+                    <div class="usage-scope truncate notranslate" translate="no">
+                        <?= e(Tenant::selected()['name'], false) ?>
+                    </div>
+                <?php endif ?>
+
                 <div class="row-line">
                     <span><?= _l('cdn.common.storage') ?></span>
                     <b class="notranslate" translate="no">{{ File::humanFileSize($used) }}</b>
@@ -126,6 +135,12 @@ $sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M')
                         <span><?= _l('cdn.common.of') ?> <span class="notranslate" translate="no">{{ File::humanFileSize($quota) }}</span></span>
                         <b><?= $share ?>%</b>
                     </div>
+
+                    <?php # Whose ceiling this is: the project's own, or the
+                          # account's that every project shares. ?>
+                    <?php if (($usage['scope'] ?? 'account') !== 'account') : ?>
+                        <div class="usage-note"><?= _l($usage['scope'] === 'project' ? 'cdn.projects.own-quota' : 'cdn.projects.account-wide') ?></div>
+                    <?php endif ?>
                 <?php endif ?>
 
                 <div class="row-line mt-3">

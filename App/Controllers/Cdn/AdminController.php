@@ -50,7 +50,10 @@ class AdminController
     {
         $projects = Tenant::projects();
         $buckets  = Tenant::buckets();
-        $usage    = Tenant::usage();
+
+        # Everything else on this page is the selected project; the numbers at
+        # the top of it are too.
+        $usage    = Tenant::scopedUsage();
 
         $files = (new Files)
             ->whereIn('project_id', Tenant::projectIds())
