@@ -175,6 +175,7 @@ return [
         'buckets'        => "Bucket'lar",
         'buckets-lede'   => "Bucket, kuralları olan bir klasördür. Adı, projeden sonraki parçadır.",
         'no-buckets'     => "Bu projede henüz bucket yok.",
+        'own-quota'      => 'yalnız bu proje',
         'account-wide'   => 'hesap geneli',
         'rename'         => 'Yeniden adlandır',
         'rename-lede'    => 'URL adına dokunulmaz — bu projenin bugüne kadar sunduğu her adreste o geçiyor.',
@@ -316,6 +317,7 @@ return [
     ],
 
     'buckets' => [
+        'show-files'     => 'Dosyalar',
         'add'        => 'Yeni bucket',
         'visibility' => 'Kim açabilir',
         'title'   => "Bucket'lar",

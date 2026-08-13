@@ -112,6 +112,33 @@ class Locale
     }
 
     /**
+     * Might this language be missing strings?
+     *
+     * Two stats, which is what makes it safe to ask on a page render: if the
+     * source file has been written since this locale's was, something may have
+     * been added to it. Hand-written languages are never behind - a gap in
+     * those is somebody's to fill - and neither is the source itself.
+     *
+     * A false positive costs one pass through the builder, which finds nothing
+     * missing, rewrites the file and so stops answering true. A false negative
+     * is not possible: nothing adds a string without writing the source file.
+     *
+     * @param string $code
+     * @return bool
+     */
+    public static function behind(string $code): bool
+    {
+        if (!self::buildable() || $code === '' || in_array($code, self::native(), true)) return false;
+
+        $source = self::path((string) (config('cdn.i18n.source') ?: 'en'));
+        $target = self::path($code);
+
+        if (!is_file($source) || !is_file($target)) return false;
+
+        return filemtime($source) > filemtime($target);
+    }
+
+    /**
      * Does it have every string the interface now has?
      *
      * A generated language is a snapshot of the English file on the day it was

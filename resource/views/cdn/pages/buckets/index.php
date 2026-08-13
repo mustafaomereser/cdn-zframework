@@ -63,6 +63,13 @@
                     <td class="text-end">{{ File::humanFileSize($bucket['storage_used']) }}</td>
                     <td class="text-end">{{ File::humanFileSize($bucket['bandwidth_used']) }}</td>
                     <td class="text-end text-nowrap">
+                        <?php # Said out loud. The bucket's name has always been
+                              # a link to its files, which nobody can see is a
+                              # link to its files. ?>
+                        <a href="{{ route('cdn-admin.files') }}?bucket={{ $bucket['id'] }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark"></i> {{ _l('cdn.buckets.show-files') }}
+                        </a>
+
                         <a href="{{ route('cdn-admin.buckets.edit', ['id' => $bucket['id']]) }}" class="btn btn-sm btn-outline-secondary">{{ _l('cdn.common.edit') }}</a>
 
                         <form action="{{ route('cdn-admin.buckets.purge', ['id' => $bucket['id']]) }}" method="POST" class="d-inline"

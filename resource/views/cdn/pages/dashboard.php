@@ -239,7 +239,11 @@ $sentShare = $usage['bandwidth-quota'] > 0 ? min(100, round($usage['bandwidth'] 
                         <span class="badge text-bg-{{ $bucket['visibility'] == 'public' ? 'success' : ($bucket['visibility'] == 'signed' ? 'warning' : 'secondary') }}">
                             {{ _l('cdn.visibility.' . $bucket['visibility']) }}
                         </span>
-                        <span class="hint notranslate" translate="no">{{ number_format((int) $bucket['files_count']) }}</span>
+                        <a class="btn btn-sm btn-outline-secondary ms-1" title="{{ _l('cdn.buckets.show-files') }}"
+                           href="{{ route('cdn-admin.files') }}?bucket={{ $bucket['id'] }}">
+                            <i class="bi bi-file-earmark"></i>
+                            <span class="notranslate" translate="no">{{ number_format((int) $bucket['files_count']) }}</span>
+                        </a>
                     </span>
                 </div>
                 @endforeach

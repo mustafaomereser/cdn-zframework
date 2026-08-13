@@ -74,6 +74,7 @@ $share = $user['quota'] > 0 ? min(100, round($user['storage'] / $user['quota'] *
                                 <th class="text-end">{{ _l('cdn.projects.buckets') }}</th>
                                 <th class="text-end">{{ _l('cdn.common.files') }}</th>
                                 <th class="text-end">{{ _l('cdn.common.storage') }}</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -90,11 +91,17 @@ $share = $user['quota'] > 0 ? min(100, round($user['storage'] / $user['quota'] *
                                     <td class="text-end notranslate" translate="no"><?= number_format($project['buckets']) ?></td>
                                     <td class="text-end notranslate" translate="no"><?= number_format($project['files']) ?></td>
                                     <td class="text-end notranslate" translate="no">{{ File::humanFileSize((int) $project['storage_used']) }}</td>
+                                    <td class="text-end text-nowrap">
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{{ route('cdn-admin.operator.files') }}?project={{ $project['id'] }}">
+                                            <i class="bi bi-file-earmark"></i> {{ _l('cdn.buckets.show-files') }}
+                                        </a>
+                                    </td>
                                 </tr>
                             <?php endforeach ?>
 
                             <?php if (!count($projects)) : ?>
-                                <tr><td colspan="4" class="text-center hint py-3">{{ _l('cdn.common.nothing') }}</td></tr>
+                                <tr><td colspan="5" class="text-center hint py-3">{{ _l('cdn.common.nothing') }}</td></tr>
                             <?php endif ?>
                         </tbody>
                     </table>

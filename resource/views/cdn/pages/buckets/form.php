@@ -14,9 +14,15 @@
             <?php
             # An existing bucket keeps its project: moving one would change every
             # url it serves, which is a different operation from editing it.
+            #
+            # A new one starts on whichever project sent us here - the "new
+            # bucket" button on a project's page means that project, and landing
+            # on the first one in the list instead is how a bucket ends up
+            # somewhere nobody meant to put it. Resolved through Tenant, so an
+            # id in the query string is still somebody's own.
             $formProject = isset($bucket['project_id'])
                 ? Tenant::projectOf($bucket)
-                : $projects[0];
+                : Tenant::project(request('project') ?: null);
             ?>
 
             <div class="row g-3">

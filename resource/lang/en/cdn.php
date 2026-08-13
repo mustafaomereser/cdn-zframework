@@ -175,6 +175,7 @@ return [
         'buckets'        => 'Buckets',
         'buckets-lede'   => 'A bucket is a folder with rules. Its name is the segment after the project.',
         'no-buckets'     => 'No buckets in this project yet.',
+        'own-quota'      => 'this project only',
         'account-wide'   => 'account-wide',
         'rename'         => 'Rename',
         'rename-lede'    => 'The URL name is not touched — it is in every address this project has ever served.',
@@ -316,6 +317,7 @@ return [
     ],
 
     'buckets' => [
+        'show-files'     => 'Files',
         'add'        => 'New bucket',
         'visibility' => 'Who can open it',
         'title'   => 'Buckets',

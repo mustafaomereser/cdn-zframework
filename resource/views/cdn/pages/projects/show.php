@@ -9,7 +9,16 @@
 @endsection
 
 @section('body')
-<?php $suspended = ($project['status'] ?? 'active') !== 'active'; ?>
+<?php
+$suspended = ($project['status'] ?? 'active') !== 'active';
+
+# A project given numbers of its own shows those, said as its own. Showing the
+# account's here meant an operator could raise one project to 50 GB and its
+# owner would still be looking at the account's 5.
+$custom = ($project['quota_mode'] ?? 'account') === 'custom';
+$quota  = $custom ? (int) $project['storage_quota'] : (int) $usage['quota'];
+$share  = $quota > 0 ? min(100, round($project['storage_used'] / $quota * 100)) : 0;
+?>
 
 <?php if ($suspended) : ?>
     <?php # The owner sees this rather than a project that simply stopped
@@ -26,9 +35,18 @@
         <div class="stat">
             <div class="label">{{ _l('cdn.common.storage') }}</div>
             <div class="value notranslate" translate="no">{{ File::humanFileSize($project['storage_used']) }}</div>
-            <div class="hint"><?= $usage['quota'] > 0
-                ? _l('cdn.common.of') . ' ' . File::humanFileSize($usage['quota']) . ' — ' . _l('cdn.projects.account-wide')
-                : _l('cdn.operator.unlimited') ?></div>
+
+            <?php if ($quota > 0) : ?>
+                <div class="quota <?= $share >= 95 ? 'full' : ($share >= 80 ? 'warn' : '') ?>">
+                    <div style="width: <?= $share ?>%"></div>
+                </div>
+                <div class="hint mt-1">
+                    <?= _l('cdn.common.of') ?> <span class="notranslate" translate="no"><?= File::humanFileSize($quota) ?></span>
+                    — <?= _l($custom ? 'cdn.projects.own-quota' : 'cdn.projects.account-wide') ?>
+                </div>
+            <?php else : ?>
+                <div class="hint"><?= _l('cdn.operator.unlimited') ?></div>
+            <?php endif ?>
         </div>
     </div>
 
@@ -36,7 +54,13 @@
         <div class="stat">
             <div class="label">{{ _l('cdn.common.transfer') }}</div>
             <div class="value notranslate" translate="no">{{ File::humanFileSize($month) }}</div>
-            <div class="hint notranslate" translate="no"><?= date('Y-m') ?></div>
+            <div class="hint">
+                <span class="notranslate" translate="no"><?= date('Y-m') ?></span>
+                <?php if (($custom ? (int) $project['bandwidth_quota'] : (int) $usage['bandwidth-quota']) > 0) : ?>
+                    · <?= _l('cdn.common.of') ?>
+                    <span class="notranslate" translate="no"><?= File::humanFileSize($custom ? (int) $project['bandwidth_quota'] : (int) $usage['bandwidth-quota']) ?></span>
+                <?php endif ?>
+            </div>
         </div>
     </div>
 
@@ -51,8 +75,19 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <h6>{{ _l('cdn.projects.buckets') }}</h6>
-        <p class="hint">{{ _l('cdn.projects.buckets-lede') }}</p>
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <div>
+                <h6 class="mb-1">{{ _l('cdn.projects.buckets') }}</h6>
+                <p class="hint mb-0">{{ _l('cdn.projects.buckets-lede') }}</p>
+            </div>
+
+            <?php # Where somebody actually is when they want one: looking at
+                  # this project's buckets. ?>
+            <a href="{{ route('cdn-admin.buckets.create') }}?project={{ $project['id'] }}"
+               class="btn btn-sm btn-primary text-nowrap">
+                <i class="bi bi-plus-lg"></i> {{ _l('cdn.buckets.add') }}
+            </a>
+        </div>
 
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
@@ -81,6 +116,9 @@
                             <td class="text-end notranslate" translate="no">{{ File::humanFileSize((int) $bucket['storage_used']) }}</td>
 
                             <td class="text-end text-nowrap">
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ route('cdn-admin.files') }}?bucket={{ $bucket['id'] }}">
+                                    <i class="bi bi-file-earmark"></i> {{ _l('cdn.buckets.show-files') }}
+                                </a>
                                 <a class="btn btn-sm btn-outline-secondary" href="{{ route('cdn-admin.buckets.edit', ['id' => $bucket['id']]) }}">
                                     {{ _l('cdn.common.edit') }}
                                 </a>
@@ -89,7 +127,14 @@
                     <?php endforeach ?>
 
                     <?php if (!count($buckets)) : ?>
-                        <tr><td colspan="5" class="text-center hint py-4">{{ _l('cdn.projects.no-buckets') }}</td></tr>
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <div class="hint mb-2">{{ _l('cdn.projects.no-buckets') }}</div>
+                                <a href="{{ route('cdn-admin.buckets.create') }}?project={{ $project['id'] }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus-lg"></i> {{ _l('cdn.buckets.add') }}
+                                </a>
+                            </td>
+                        </tr>
                     <?php endif ?>
                 </tbody>
             </table>

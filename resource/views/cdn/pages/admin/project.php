@@ -71,6 +71,7 @@ $split = function (int $bytes) use ($units): array {
                                 <th>{{ _l('cdn.buckets.visibility') }}</th>
                                 <th class="text-end">{{ _l('cdn.common.files') }}</th>
                                 <th class="text-end">{{ _l('cdn.common.storage') }}</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -86,11 +87,17 @@ $split = function (int $bytes) use ($units): array {
                                     <td><span class="badge text-bg-secondary"><?= _l('cdn.visibility.' . ($bucket['visibility'] ?: 'public')) ?></span></td>
                                     <td class="text-end notranslate" translate="no">{{ number_format((int) $bucket['files_count']) }}</td>
                                     <td class="text-end notranslate" translate="no">{{ File::humanFileSize((int) $bucket['storage_used']) }}</td>
+                                    <td class="text-end text-nowrap">
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{{ route('cdn-admin.operator.files') }}?bucket={{ $bucket['id'] }}">
+                                            <i class="bi bi-file-earmark"></i> {{ _l('cdn.buckets.show-files') }}
+                                        </a>
+                                    </td>
                                 </tr>
                             <?php endforeach ?>
 
                             <?php if (!count($buckets)) : ?>
-                                <tr><td colspan="4" class="text-center hint py-3">{{ _l('cdn.projects.no-buckets') }}</td></tr>
+                                <tr><td colspan="5" class="text-center hint py-3">{{ _l('cdn.projects.no-buckets') }}</td></tr>
                             <?php endif ?>
                         </tbody>
                     </table>
