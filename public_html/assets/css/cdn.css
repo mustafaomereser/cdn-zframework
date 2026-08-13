@@ -742,6 +742,128 @@ body > .select2-container { max-width: none; }
 
 footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 
+/* ---------------------------------------------------------------- docs */
+
+.docs { background: var(--surface); }
+
+.docs-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding: 36px 0 60px; }
+
+.docs-nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+
+.docs-nav a {
+    display: block;
+    padding: 5px 10px;
+    color: var(--ink-3);
+    font-size: .875rem;
+    font-weight: 450;
+    border-left: 2px solid var(--line);
+    text-decoration: none;
+}
+
+.docs-nav a:hover { color: var(--ink); border-left-color: var(--line-strong); text-decoration: none; }
+.docs-nav a.active { color: var(--accent-ink); border-left-color: var(--accent); font-weight: 500; }
+
+.docs-body { max-width: 780px; }
+.docs-body h1 { font-size: 2.1rem; margin-bottom: 10px; }
+.docs-body .lead { font-size: 1.05rem; color: var(--ink-2); margin-bottom: 40px; line-height: 1.6; }
+
+.docs-body section { padding-top: 26px; margin-bottom: 40px; border-top: 1px solid var(--line); }
+.docs-body section:first-of-type { border-top: 0; padding-top: 0; }
+
+.docs-body h2 { font-size: 1.45rem; margin-bottom: 14px; scroll-margin-top: 24px; }
+.docs-body h3 { font-size: 1.05rem; margin: 28px 0 10px; }
+.docs-body p { color: var(--ink-2); margin-bottom: 14px; }
+.docs-body ul, .docs-body ol { color: var(--ink-2); margin-bottom: 16px; padding-left: 20px; }
+.docs-body li { margin-bottom: 7px; }
+.docs-body .table { margin-bottom: 20px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+
+/* Numbered quick-start list: the number is the point, so it is drawn rather
+   than left to the browser's default marker. */
+.docs-body ol.steps { list-style: none; padding: 0; counter-reset: step; }
+
+.docs-body ol.steps li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 0 38px;
+    margin-bottom: 14px;
+}
+
+.docs-body ol.steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    font-size: .8125rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.docs-body pre {
+    position: relative;
+    background: #0f1218;
+    color: #dbe1ea;
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+    font-size: .8125rem;
+    line-height: 1.6;
+}
+
+.docs-body pre code { color: inherit; background: none; font-size: inherit; white-space: pre; }
+
+.docs-body pre .copy {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    background: #232a38;
+    border: 1px solid #313a4c;
+    color: #b7c0cf;
+    border-radius: 5px;
+    font-size: .6875rem;
+    font-weight: 500;
+    padding: 3px 9px;
+    opacity: 0;
+    transition: opacity .12s, background .12s;
+}
+
+.docs-body pre:hover .copy { opacity: 1; }
+.docs-body pre .copy:hover { background: #2e3849; color: #fff; }
+
+.docs-body .note {
+    background: var(--accent-wash);
+    border: 1px solid rgba(47, 75, 240, .18);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    color: var(--ink-2);
+    font-size: .875rem;
+    margin: 20px 0;
+}
+
+.docs-body .note b { color: var(--ink); }
+
+.lang-switch { display: inline-flex; background: var(--surface-3); border-radius: var(--radius-sm); padding: 2px; }
+
+.lang-switch a {
+    padding: 3px 11px;
+    border-radius: 4px;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--ink-3);
+    text-decoration: none;
+    letter-spacing: .03em;
+}
+
+.lang-switch a:hover { color: var(--ink); text-decoration: none; }
+.lang-switch a.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(16, 19, 26, .12); }
+
 /* ---------------------------------------------------------------- small screens */
 
 @media (max-width: 991px) {
@@ -750,4 +872,9 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
     main { padding: 20px 16px 40px; }
     .hero h1 { font-size: 2rem; max-width: none; }
     .truncate { max-width: 190px; }
+
+    .docs-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .docs-nav { position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 4px; }
+    .docs-nav .label { width: 100%; }
+    .docs-nav a { border-left: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 4px 10px; }
 }

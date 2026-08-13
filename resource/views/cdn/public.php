@@ -18,7 +18,9 @@
         <div class="container d-flex align-items-center justify-content-between">
             <a class="brand" href="/"><i class="bi bi-hdd-network"></i> {{ config('app.title') }}</a>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <a href="{{ route('docs') }}" class="hint">Docs</a>
+
                 @if(zFramework\Core\Facades\Auth::check())
                 <a href="{{ route('cdn-admin.dashboard') }}" class="btn btn-primary btn-sm">Open panel</a>
                 @else

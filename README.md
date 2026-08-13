@@ -75,6 +75,11 @@ write.
 Open `http://127.0.0.1:8080`, create the first account, and you are an
 [operator](#operators).
 
+The running installation documents itself at **`/docs`**, in English and
+Turkish, with every example written against the host it is being read on — so
+it can be copied and run without editing. This README is the same material for
+people reading the repository rather than the service.
+
 > `php cdn serve` starts PHP's built-in server **with a router script**.
 > `php terminal run` does not, and without one no URL with a file extension ever
 > reaches PHP — which is every URL this application serves.

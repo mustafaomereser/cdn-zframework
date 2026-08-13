@@ -81,6 +81,7 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
                 <?php endif ?>
             </div>
 
+            <a href="{{ route('docs') }}" target="_blank"><i class="bi bi-book"></i> Documentation</a>
             <a href="/" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Public site</a>
 
             <?php /* A form, not a script: a sign-out that depends on javascript

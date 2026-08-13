@@ -30,6 +30,11 @@ Route::middleware([App\Middlewares\Auth::class])->group(fn() => Route::post('/si
 
 Route::get('/auth-content', [AuthController::class, 'content'])->name('auth-content');
 
+# Public, and deliberately so: somebody deciding whether to sign up reads this
+# before there is an account to sign in to.
+Route::get('/docs', [App\Controllers\Cdn\DocsController::class, 'index'])->name('docs');
+Route::get('/docs/{language}', [App\Controllers\Cdn\DocsController::class, 'index'])->name('docs.language');
+
 # A single page, not a resource. The skeleton's resource registered six other
 # routes on `/`, one of which POSTed straight into the terminal - a remote shell
 # on a host whose whole job is to be publicly reachable.
