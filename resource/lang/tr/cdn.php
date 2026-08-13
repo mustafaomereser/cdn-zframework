@@ -29,6 +29,7 @@ return [
     ],
 
     'operator' => [
+        'move-other-account' => "Bir dosya yalnızca aynı hesaba ait bir bucket'a taşınabilir.",
         'files'           => 'Dosyalar',
         'files-lede'      => 'Bu kurulumda saklanan her şey, sahibi kim olursa olsun.',
         'account-projects-lede' => 'Bu hesabın projeleri ve içlerinde ne olduğu.',
@@ -292,6 +293,14 @@ return [
     ],
 
     'files' => [
+        'selected'       => 'seçili',
+        'select-all'     => 'Bu sayfadakilerin hepsini seç',
+        'clear-selection' => 'Temizle',
+        'none-selected'  => 'Hiçbir şey seçilmedi.',
+        'move'           => 'Taşı',
+        'move-to'        => 'Şuraya taşı…',
+        'move-note'      => "Taşımak bu dosyaların bütün adreslerini değiştirir. Eski adreste hiçbir şey kalmaz.",
+        'delete-confirm' => 'Seçili dosyalar silinsin mi? Adreslerini kullanan her sayfa bozulur.',
         'title'    => 'Dosyalar',
         'lede'     => 'Sakladığın her şey. Adresini ve isteyebileceğin boyutları görmek için birine tıkla.',
         'all'      => "Tüm bucket'lar",
@@ -518,6 +527,8 @@ return [
     ],
 
     'alerts' => [
+        'files-deleted'   => '{count} dosya silindi.',
+        'files-moved'     => "{count} dosya {bucket} bucket'ına taşındı.",
         'project-main'    => 'Bu senin ana projen — adı, adreslerinin ad alanı olduğu için silinemez ve yeniden adlandırılamaz.',
         'suspended'       => 'Bu hesap askıya alınmış.',
         'suspended-because' => 'Bu hesap askıya alındı: {reason}',

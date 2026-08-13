@@ -1002,6 +1002,23 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 
 .minify-note i.bi-scissors { color: var(--accent-ink); margin-right: 4px; }
 
+/* The bar that appears when files are ticked. Sticky, because a selection made
+   at the bottom of a long list is acted on from wherever you are. */
+.bulk-bar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--accent-wash);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+}
+
+.bulk-bar .count { font-size: .875rem; color: var(--accent-ink); }
+.bulk-bar .count b { font-size: 1rem; }
+
 /* What is true right now, above the button that changes it. */
 .state-box {
     border: 1px solid #f0c2b8;

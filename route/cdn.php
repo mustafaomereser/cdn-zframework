@@ -98,6 +98,7 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin'), '/cdn-admin')
         Route::get('/files', [AdminController::class, 'files'])->name('files');
         Route::post('/files/upload', [AdminController::class, 'upload'])->name('files.upload');
         Route::post('/files/{id}/delete', [AdminController::class, 'fileDelete'])->name('files.delete');
+        Route::post('/files/bulk', [AdminController::class, 'filesBulk'])->name('files.bulk');
         Route::get('/files/{id}', [AdminController::class, 'file'])->name('files.show');
 
         Route::get('/keys', [AdminController::class, 'keys'])->name('keys');
@@ -136,6 +137,7 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin') . '/admin', '/cd
         Route::get('/', [OperatorController::class, 'users'])->name('users');
         Route::get('/projects', [OperatorController::class, 'projects'])->name('projects');
         Route::get('/files', [OperatorController::class, 'files'])->name('files');
+        Route::post('/files/bulk', [OperatorController::class, 'filesBulk'])->name('files.bulk');
         Route::get('/users/{id}', [OperatorController::class, 'account'])->name('users.show');
         Route::get('/projects/{id}', [OperatorController::class, 'project'])->name('projects.show');
         Route::get('/system', [OperatorController::class, 'system'])->name('system');

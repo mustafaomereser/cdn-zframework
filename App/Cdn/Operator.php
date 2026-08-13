@@ -299,6 +299,72 @@ class Operator
     }
 
     /**
+     * A bucket, by id, without the tenant scoping.
+     *
+     * @param int|string $id
+     * @return array
+     */
+    public static function bucket($id): array
+    {
+        $bucket = (new Buckets)->closureMode(false)->where('id', (int) $id)->first();
+
+        if (!$bucket) abort(404);
+
+        return $bucket;
+    }
+
+    /**
+     * File rows for a list of ids, in one query.
+     *
+     * @param array $ids
+     * @return array
+     */
+    public static function filesByIds(array $ids): array
+    {
+        if (!count($ids)) return [];
+
+        return (new Files)->whereIn('id', $ids)->closureMode(false)->get();
+    }
+
+    /**
+     * Buckets a listing may be moved into, grouped by project name.
+     *
+     * Only when every row on the page belongs to one account. Across accounts
+     * there is no answer that is right for all of them, and putting one
+     * customer's bytes inside another's namespace is the one move worth making
+     * impossible rather than merely careful.
+     *
+     * @param array $files
+     * @return array
+     */
+    public static function moveTargets(array $files): array
+    {
+        $projectIds = array_values(array_unique(array_map(fn($file) => (int) $file['project_id'], $files)));
+
+        if (!count($projectIds)) return [];
+
+        $projects = (new Projects)->whereIn('id', $projectIds)->closureMode(false)->get();
+        $owners   = array_values(array_unique(array_map(fn($p) => (int) $p['owner_id'], $projects)));
+
+        if (count($owners) !== 1) return [];
+
+        $own     = (new Projects)->where('owner_id', $owners[0])->closureMode(false)->orderBy(['id' => 'ASC'])->get();
+        $ids     = array_map(fn($p) => (int) $p['id'], $own);
+        $buckets = count($ids) ? (new Buckets)->whereIn('project_id', $ids)->closureMode(false)->get() : [];
+
+        $targets = [];
+
+        foreach ($own as $project) {
+            $targets[$project['name']] = array_values(array_filter(
+                $buckets,
+                fn($bucket) => (int) $bucket['project_id'] === (int) $project['id']
+            ));
+        }
+
+        return $targets;
+    }
+
+    /**
      * Set an account's allowance. Bytes; 0 is unlimited.
      *
      * Written to the account and then down to its projects. The delivery path

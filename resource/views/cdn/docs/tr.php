@@ -262,6 +262,19 @@
     </div>
 </section>
 
+    <h3>Toplu taşıma ve silme</h3>
+
+    <p>
+        Dosyalar sayfasında birkaçını işaretleyince üstte bir çubuk çıkar: hepsini silebilir ya da başka bir
+        bucket'a taşıyabilirsin — başka bir projendeki bucket da olur.
+    </p>
+
+    <div class="note">
+        Taşımak diskte hiçbir şeyi kopyalamaz; baytlar içeriğe göre adreslenir, yani taşıma üç kolon ve iki
+        yandaki sayaçlar demektir. Değişen şey <b>adres</b>: proje ve bucket adresin parçaları olduğu için
+        dosyanın eski adresi çalışmayı bırakır ve eskisinden yenisine yönlendirme bırakılmaz.
+    </div>
+
 <section id="signed">
     <h2>İmzalı adresler</h2>
 

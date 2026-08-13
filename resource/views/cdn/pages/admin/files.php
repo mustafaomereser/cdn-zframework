@@ -34,11 +34,24 @@
     </div>
 </div>
 
+<?php
+# The move menu is the buckets of whichever account the listing is filtered to.
+# Across accounts there is no one right answer, and moving one customer's file
+# into another's namespace is refused by the endpoint anyway.
+$bulkAction  = route('cdn-admin.operator.files.bulk');
+$bulkTargets = $moveTargets;
+
+include(BASE_PATH . '/resource/views/cdn/partials/bulk-files.php');
+?>
+
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
+                    <th style="width: 34px">
+                        <input class="form-check-input" type="checkbox" id="pick-all" title="{{ _l('cdn.files.select-all') }}">
+                    </th>
                     <th>{{ _l('cdn.files.path') }}</th>
                     <th>{{ _l('cdn.common.bucket') }}</th>
                     <th>{{ _l('cdn.common.project') }}</th>
@@ -50,6 +63,10 @@
             <tbody>
                 <?php foreach ($files['items'] as $file) : ?>
                     <tr>
+                        <td>
+                            <input class="form-check-input file-pick" type="checkbox" value="<?= (int) $file['id'] ?>">
+                        </td>
+
                         <td class="mono small truncate notranslate" translate="no"><?= e($file['path'], false) ?></td>
 
                         <td class="small notranslate" translate="no">
@@ -76,7 +93,7 @@
                 <?php endforeach ?>
 
                 <?php if (!count($files['items'])) : ?>
-                    <tr><td colspan="6" class="text-center hint py-4">{{ _l('cdn.common.nothing') }}</td></tr>
+                    <tr><td colspan="7" class="text-center hint py-4">{{ _l('cdn.common.nothing') }}</td></tr>
                 <?php endif ?>
             </tbody>
         </table>

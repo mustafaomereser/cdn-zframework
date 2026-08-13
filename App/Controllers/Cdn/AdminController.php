@@ -4,6 +4,7 @@ namespace App\Controllers\Cdn;
 
 use App\Cdn\Flash;
 use App\Cdn\Metrics;
+use App\Cdn\Mover;
 use App\Cdn\Purger;
 use App\Cdn\Registry;
 use App\Cdn\Secret;
@@ -108,7 +109,18 @@ class AdminController
 
         $files = $query->orderBy(['id' => 'DESC'])->paginate(30);
 
-        return view('cdn.pages.files.index', compact('files', 'buckets'));
+        # Every bucket the account has, for the move menu - grouped by project,
+        # because "photos" on its own does not say which one.
+        $targets = [];
+
+        foreach (Tenant::projects() as $project) {
+            $targets[$project['name']] = array_values(array_filter(
+                $buckets,
+                fn($bucket) => (int) $bucket['project_id'] === (int) $project['id']
+            ));
+        }
+
+        return view('cdn.pages.files.index', compact('files', 'buckets', 'targets'));
     }
 
     /**
@@ -133,6 +145,73 @@ class AdminController
             # not css or js, and for a file minifying does not shrink.
             'minified' => \App\Cdn\Minifier::saving($file, $bucket),
         ]);
+    }
+
+    /**
+     * Delete or move a selection of files.
+     *
+     * One endpoint for both, because they are the same request with a different
+     * verb on it: a list of ids the panel ticked, resolved one at a time through
+     * Tenant so an id somebody typed into the form is still their own.
+     *
+     * @return mixed
+     */
+    public function filesBulk(): mixed
+    {
+        $ids = array_values(array_filter(array_map('intval', (array) request('files'))));
+
+        if (!count($ids)) {
+            Flash::danger(_l('cdn.files.none-selected'));
+
+            return back();
+        }
+
+        $action = (string) request('action');
+        $target = $action === 'move' ? Tenant::bucket((string) request('target')) : null;
+
+        $done = 0;
+        $failed = [];
+
+        foreach ($ids as $id) {
+            # Resolved here rather than in one whereIn: it is the same check the
+            # single-file paths make, and a bulk action is not a reason to
+            # trust an id more.
+            $file = Tenant::file($id);
+
+            if ($action === 'move') {
+                $result = Mover::move($file, $target);
+
+                if ($result['ok']) $done++;
+                else $failed[] = $this->reason($result + ['error' => $result['error'] ?? 'unknown']);
+
+                continue;
+            }
+
+            $bucket = Tenant::bucket((int) $file['bucket_id']);
+
+            if ($reason = \App\Cdn\Guard::frozen($bucket)) {
+                $failed[] = _l('cdn.upload-errors.' . $reason);
+                continue;
+            }
+
+            Uploader::delete($file);
+            Registry::forgetBucket($bucket);
+
+            $done++;
+        }
+
+        if ($done) {
+            Flash::success(_l($action === 'move' ? 'cdn.alerts.files-moved' : 'cdn.alerts.files-deleted', [
+                'count'  => $done,
+                'bucket' => $target['name'] ?? '',
+            ]));
+        }
+
+        # One line per distinct reason: fifty files refused for the same thing
+        # is one thing to say, not fifty.
+        foreach (array_unique($failed) as $message) Flash::danger($message);
+
+        return back();
     }
 
     /**

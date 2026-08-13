@@ -4,6 +4,8 @@ namespace App\Controllers\Cdn;
 
 use App\Cdn\Flash;
 use App\Cdn\Operator;
+use App\Cdn\Mover;
+use App\Cdn\Uploader;
 use App\Cdn\Runner;
 use App\Cdn\Storage;
 use App\Cdn\Support;
@@ -95,10 +97,80 @@ class OperatorController
      */
     public function files(): mixed
     {
+        $files = Operator::files();
+
         return view('cdn.pages.admin.files', [
-            'files'  => Operator::files(),
+            'files'  => $files,
+
+            # Only when the listing is one account's, which is what a bucket or
+            # project filter makes it. Offering every bucket in the installation
+            # would be a menu nobody can read and a move nobody meant.
+            'moveTargets' => Operator::moveTargets($files['items']),
             'prefix' => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
         ]);
+    }
+
+    /**
+     * Delete or move a selection of files, across accounts.
+     *
+     * A move here is bound by one rule the panel's own is not: every file has to
+     * belong to the same owner as the bucket it is going to. An operator can see
+     * everything, which is exactly why the one action that puts one customer's
+     * bytes inside another's namespace is refused rather than trusted.
+     *
+     * @return mixed
+     */
+    public function filesBulk(): mixed
+    {
+        $ids = array_values(array_filter(array_map('intval', (array) request('files'))));
+
+        if (!count($ids)) {
+            Flash::danger(_l('cdn.files.none-selected'));
+
+            return back();
+        }
+
+        $action = (string) request('action');
+        $target = $action === 'move' ? Operator::bucket((string) request('target')) : null;
+        $owner  = $target ? (int) Operator::project((int) $target['project_id'])['owner_id'] : 0;
+
+        $done   = 0;
+        $failed = [];
+
+        foreach (Operator::filesByIds($ids) as $file) {
+            if ($action === 'move') {
+                if ((int) Operator::project((int) $file['project_id'])['owner_id'] !== $owner) {
+                    $failed[] = _l('cdn.operator.move-other-account');
+                    continue;
+                }
+
+                $result = Mover::move($file, $target);
+
+                if ($result['ok']) $done++;
+                else $failed[] = _l('cdn.upload-errors.' . ($result['error'] ?? 'unknown'), ['error' => $result['error'] ?? '']);
+
+                continue;
+            }
+
+            Uploader::delete($file);
+            $done++;
+        }
+
+        if ($done) {
+            Operator::audit($action === 'move' ? 'files-moved' : 'files-deleted', 'files', [
+                'id'   => $target['id'] ?? null,
+                'name' => $target['name'] ?? null,
+            ], ['count' => $done]);
+
+            Flash::success(_l($action === 'move' ? 'cdn.alerts.files-moved' : 'cdn.alerts.files-deleted', [
+                'count'  => $done,
+                'bucket' => $target['name'] ?? '',
+            ]));
+        }
+
+        foreach (array_unique($failed) as $message) Flash::danger($message);
+
+        return back();
     }
 
     /**

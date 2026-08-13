@@ -27,11 +27,21 @@
     </div>
 </form>
 
+<?php
+$bulkAction  = route('cdn-admin.files.bulk');
+$bulkTargets = $targets;
+
+include(BASE_PATH . '/resource/views/cdn/partials/bulk-files.php');
+?>
+
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
+                    <th style="width: 34px">
+                        <input class="form-check-input" type="checkbox" id="pick-all" title="{{ _l('cdn.files.select-all') }}">
+                    </th>
                     <th>{{ _l('cdn.files.path') }}</th>
                     <th>{{ _l('cdn.common.bucket') }}</th>
                     <th>{{ _l('cdn.files.type') }}</th>
@@ -51,6 +61,10 @@
                     $fileBucket  = Tenant::bucket((int) $file['bucket_id']);
                     $fileProject = Tenant::projectOf($fileBucket);
                     ?>
+                    <td>
+                        <input class="form-check-input file-pick" type="checkbox" value="{{ $file['id'] }}">
+                    </td>
+
                     <td>
                         <a href="{{ route('cdn-admin.files.show', ['id' => $file['id']]) }}" class="mono text-decoration-none truncate d-block notranslate" translate="no">
                             {{ $file['path'] }}
@@ -84,7 +98,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center text-secondary py-4 small">
+                    <td colspan="8" class="text-center text-secondary py-4 small">
                         {{ _l('cdn.files.empty') }} <a href="{{ route('cdn-admin.dashboard') }}">{{ _l('cdn.files.empty-action') }}</a>.
                     </td>
                 </tr>

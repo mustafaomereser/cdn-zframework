@@ -29,6 +29,7 @@ return [
     ],
 
     'operator' => [
+        'move-other-account' => 'A file can only be moved into a bucket belonging to the same account.',
         'files'           => 'Files',
         'files-lede'      => 'Everything stored in this installation, whoever owns it.',
         'account-projects-lede' => 'What this account has, and what is in each of them.',
@@ -292,6 +293,14 @@ return [
     ],
 
     'files' => [
+        'selected'       => 'selected',
+        'select-all'     => 'Select all on this page',
+        'clear-selection' => 'Clear',
+        'none-selected'  => 'Nothing was selected.',
+        'move'           => 'Move',
+        'move-to'        => 'Move to…',
+        'move-note'      => 'A move changes every URL these files have. Nothing is left behind at the old one.',
+        'delete-confirm' => 'Delete the selected files? Any page using their URLs will break.',
         'title'    => 'Files',
         'lede'     => 'Everything you have stored. Click one for its URL and the sizes you can ask for.',
         'all'      => 'All buckets',
@@ -518,6 +527,8 @@ return [
     ],
 
     'alerts' => [
+        'files-deleted'   => '{count} file(s) deleted.',
+        'files-moved'     => '{count} file(s) moved to {bucket}.',
         'project-main'    => 'This is your main project — its name is your URL namespace, so it cannot be deleted or renamed.',
         'suspended'       => 'This account is suspended.',
         'suspended-because' => 'This account is suspended: {reason}',

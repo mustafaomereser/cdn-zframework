@@ -516,7 +516,7 @@ class Uploader
      * @param int   $files
      * @return void
      */
-    private static function account(array $bucket, int $bytes, int $files): void
+    public static function account(array $bucket, int $bytes, int $files): void
     {
         $db = new DB;
 

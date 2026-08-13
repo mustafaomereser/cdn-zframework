@@ -260,6 +260,19 @@
     </div>
 </section>
 
+    <h3>Moving and deleting in bulk</h3>
+
+    <p>
+        Tick a few files on the Files page and a bar appears: delete them, or move them into another bucket -
+        including a bucket in another of your projects.
+    </p>
+
+    <div class="note">
+        A move copies nothing on disk; the bytes are content addressed, so it is three columns and the
+        counters either side of them. What changes is the <b>URL</b>: the project and the bucket are both
+        segments of it, so the file's old address stops working and no redirect is left behind.
+    </div>
+
 <section id="signed">
     <h2>Signed URLs</h2>
 

@@ -503,6 +503,11 @@ project — files, buckets, keys, activity and the usage figures all follow it.
 for its URL, a live size builder (change width, format, quality and watch the
 URL and preview update), and the list of sizes already generated from it.
 
+Tick several and a bar appears: delete them, or move them into another bucket —
+including a bucket in another of your projects. Nothing on disk moves; the bytes
+are content addressed, so a move is three columns and the counters either side
+of it. What does change is the URL, and there is no redirect left behind.
+
 **Buckets** — the rules. The form is short by default: name, URL name, who can
 open the URLs, whether image resizing is allowed. Everything else — cache
 duration, hotlink protection, allowed types, mirroring another server — is
