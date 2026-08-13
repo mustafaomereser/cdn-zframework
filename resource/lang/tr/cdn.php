@@ -118,6 +118,8 @@ return [
         'project'    => 'Proje',
         'projects'   => 'proje',
         'bucket'     => 'Bucket',
+        'months'     => ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
+        'transfer'   => 'Trafik',
         'storage'    => 'Depolama',
         'of'         => '/',
         'requests'   => 'istek',

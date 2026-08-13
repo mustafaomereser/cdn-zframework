@@ -118,6 +118,8 @@ return [
         'project'    => 'Project',
         'projects'   => 'projects',
         'bucket'     => 'Bucket',
+        'months'     => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        'transfer'   => 'Transfer',
         'storage'    => 'Storage',
         'of'         => 'of',
         'requests'   => 'requests',

@@ -198,6 +198,7 @@ pre code { background: none; padding: 0; }
 }
 
 .sidebar .usage .row-line b { color: #e4e8ee; font-weight: 600; }
+.sidebar .usage .row-line .dim { color: #6b7688; font-size: .75rem; }
 
 .quota { height: 6px; border-radius: 3px; background: #262d3a; overflow: hidden; margin-top: 7px; }
 .quota div { height: 100%; background: #5b74ff; border-radius: 3px; transition: width .3s; }

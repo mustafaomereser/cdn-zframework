@@ -34,6 +34,20 @@ $usage    = Tenant::usage();
 $used  = $usage['used'];
 $quota = $usage['quota'];
 $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
+
+# This month's transfer, next to the storage it is usually confused with. They
+# are the two things that run out, they run out for different reasons, and the
+# one that stops the urls working is this one - so it does not belong on a
+# second page.
+$sent      = $usage['bandwidth'];
+$sentQuota = $usage['bandwidth-quota'];
+$sentShare = $sentQuota > 0 ? min(100, round($sent / $sentQuota * 100)) : 0;
+
+# date('M') is English wherever the page is read - PHP's month names do not
+# follow the locale, and setlocale() is process-wide, which in a worker is
+# somebody else's request. The names come from the language file like every
+# other word on the page.
+$sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M');
 ?>
 <!DOCTYPE html>
 <html lang="{{ zFramework\Core\Facades\Lang::$locale }}">
@@ -92,6 +106,20 @@ $share = $quota > 0 ? min(100, round($used / $quota * 100)) : 0;
                     <div class="row-line mt-1">
                         <span><?= _l('cdn.common.of') ?> <span class="notranslate" translate="no">{{ File::humanFileSize($quota) }}</span></span>
                         <b><?= $share ?>%</b>
+                    </div>
+                <?php endif ?>
+
+                <div class="row-line mt-3">
+                    <span><?= _l('cdn.common.transfer') ?> <span class="dim"><?= $sentMonth ?></span></span>
+                    <b class="notranslate" translate="no">{{ File::humanFileSize($sent) }}</b>
+                </div>
+                <?php if ($sentQuota > 0) : ?>
+                    <div class="quota <?= $sentShare >= 95 ? 'full' : ($sentShare >= 80 ? 'warn' : '') ?>">
+                        <div style="width: <?= $sentShare ?>%"></div>
+                    </div>
+                    <div class="row-line mt-1">
+                        <span><?= _l('cdn.common.of') ?> <span class="notranslate" translate="no">{{ File::humanFileSize($sentQuota) }}</span></span>
+                        <b><?= $sentShare ?>%</b>
                     </div>
                 <?php endif ?>
             </div>

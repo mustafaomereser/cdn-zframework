@@ -90,18 +90,32 @@ class Tenant
      */
     public static function usage(): array
     {
-        $used = $quota = $bandwidth = 0;
-        $unlimited = false;
+        $used = $quota = $bandwidth = $bandwidthQuota = 0;
+        $unlimited = $bandwidthUnlimited = false;
+
+        $month = date('Y-m');
 
         foreach (self::projects() as $project) {
-            $used      += (int) $project['storage_used'];
-            $bandwidth += (int) $project['bandwidth_used'];
+            $used += (int) $project['storage_used'];
+
+            # The counter belongs to a month. A row still carrying last month's
+            # period reads as zero rather than being reset here - a read path
+            # does not write to fix bookkeeping.
+            if (($project['bandwidth_period'] ?? null) === $month) $bandwidth += (int) $project['bandwidth_used'];
 
             if ((int) $project['storage_quota'] > 0) $quota += (int) $project['storage_quota'];
             else $unlimited = true;
+
+            if ((int) $project['bandwidth_quota'] > 0) $bandwidthQuota += (int) $project['bandwidth_quota'];
+            else $bandwidthUnlimited = true;
         }
 
-        return ['used' => $used, 'quota' => $unlimited ? 0 : $quota, 'bandwidth' => $bandwidth];
+        return [
+            'used'            => $used,
+            'quota'           => $unlimited ? 0 : $quota,
+            'bandwidth'       => $bandwidth,
+            'bandwidth-quota' => $bandwidthUnlimited ? 0 : $bandwidthQuota,
+        ];
     }
 
     /**
