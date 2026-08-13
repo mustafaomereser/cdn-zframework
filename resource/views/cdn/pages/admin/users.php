@@ -110,7 +110,18 @@
                             <?php endif ?>
                         </td>
 
-                        <td class="text-end small notranslate" translate="no">{{ File::humanFileSize($user['bandwidth']) }}</td>
+                        <td class="text-end small notranslate" translate="no">
+                            {{ File::humanFileSize($user['bandwidth']) }}
+                            <?php # The same shape as the storage cell next to
+                                  # it. It showed a number with nothing to
+                                  # measure it against, which reads as though
+                                  # there were no transfer limit at all. ?>
+                            <?php if (($user['bandwidth-quota'] ?? 0) > 0) : ?>
+                                <div class="hint">{{ _l('cdn.common.of') }} {{ File::humanFileSize((int) $user['bandwidth-quota']) }}</div>
+                            <?php else : ?>
+                                <div class="hint">{{ _l('cdn.operator.unlimited') }}</div>
+                            <?php endif ?>
+                        </td>
 
                         <td class="text-end text-nowrap">
                             <?php # Everything that changes an account is on the

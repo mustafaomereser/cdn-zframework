@@ -22,7 +22,9 @@ $split = function (int $bytes) use ($units): array {
 [$storageAmount, $storageUnit]     = $split((int) $user['quota']);
 [$bandwidthAmount, $bandwidthUnit] = $split((int) ($user['bandwidth-quota'] ?? 0));
 
-$share = $user['quota'] > 0 ? min(100, round($user['storage'] / $user['quota'] * 100)) : 0;
+$share     = $user['quota'] > 0 ? min(100, round($user['storage'] / $user['quota'] * 100)) : 0;
+$sentQuota = (int) ($user['bandwidth-quota'] ?? 0);
+$sentShare = $sentQuota > 0 ? min(100, round($user['bandwidth'] / $sentQuota * 100)) : 0;
 ?>
 
 <div class="d-flex align-items-center gap-2 mb-3">
@@ -49,10 +51,31 @@ $share = $user['quota'] > 0 ? min(100, round($user['storage'] / $user['quota'] *
             <div class="stat">
                 <div class="label"><i class="bi <?= $icon ?>"></i> <?= _l("cdn.operator.total-$key") ?></div>
                 <div class="value notranslate" translate="no"><?= $value ?></div>
-                <?php if ($key === 'stored' && $user['quota'] > 0) : ?>
-                    <div class="quota <?= $share >= 95 ? 'full' : ($share >= 80 ? 'warn' : '') ?>">
-                        <div style="width: <?= $share ?>%"></div>
-                    </div>
+
+                <?php # Both allowances, each under its own number. ?>
+                <?php if ($key === 'stored') : ?>
+                    <?php if ($user['quota'] > 0) : ?>
+                        <div class="quota <?= $share >= 95 ? 'full' : ($share >= 80 ? 'warn' : '') ?>">
+                            <div style="width: <?= $share ?>%"></div>
+                        </div>
+                        <div class="hint mt-1"><?= _l('cdn.common.of') ?> <span class="notranslate" translate="no"><?= File::humanFileSize((int) $user['quota']) ?></span></div>
+                    <?php else : ?>
+                        <div class="hint"><?= _l('cdn.operator.unlimited') ?></div>
+                    <?php endif ?>
+                <?php endif ?>
+
+                <?php if ($key === 'transfer') : ?>
+                    <?php if ($sentQuota > 0) : ?>
+                        <div class="quota <?= $sentShare >= 95 ? 'full' : ($sentShare >= 80 ? 'warn' : '') ?>">
+                            <div style="width: <?= $sentShare ?>%"></div>
+                        </div>
+                        <div class="hint mt-1">
+                            <?= _l('cdn.common.of') ?> <span class="notranslate" translate="no"><?= File::humanFileSize($sentQuota) ?></span>
+                            · <span class="notranslate" translate="no"><?= date('Y-m') ?></span>
+                        </div>
+                    <?php else : ?>
+                        <div class="hint"><?= _l('cdn.operator.unlimited') ?></div>
+                    <?php endif ?>
                 <?php endif ?>
             </div>
         </div>
