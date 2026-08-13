@@ -64,6 +64,17 @@
         const run    = document.getElementById('console-run');
         const url    = <?= json_encode(route('cdn-admin.operator.console.run')) ?>;
 
+        function escapeHtml(text) {
+            const box = document.createElement('div');
+            box.textContent = text;
+            return box.innerHTML;
+        }
+
+        function write(html) {
+            out.insertAdjacentHTML('beforeend', html);
+            out.scrollTop = out.scrollHeight;
+        }
+
         // Only the selected script's allowlist.
         function showAllowed() {
             document.querySelectorAll('.console-allow').forEach(function (row) {
@@ -87,8 +98,11 @@
             const line = (script.value + ' ' + input.value).trim();
 
             run.disabled = true;
-            out.textContent += (out.textContent ? '\n' : '') + '$ php ' + line + '\n';
-            out.scrollTop = out.scrollHeight;
+
+            // The typed line is the operator's own text, so it is escaped here.
+            // The output is escaped on the server, where the colour markup is
+            // put back afterwards.
+            write('<span class="console-echo">$ php ' + escapeHtml(line) + '</span>\n');
 
             try {
                 const response = await fetch(url, {
@@ -99,14 +113,14 @@
 
                 const payload = await response.json();
 
-                out.textContent += (payload.output || '').replace(/\s+$/, '')
-                    + '\n' + <?= json_encode(_l('cdn.console.exit')) ?> + ' ' + (payload.code === null ? '—' : payload.code) + '\n';
+                write((payload.output || '').replace(/\s+$/, '')
+                    + '\n<span class="console-exit">' + <?= json_encode(_l('cdn.console.exit')) ?>
+                    + ' ' + (payload.code === null ? '—' : payload.code) + '</span>\n\n');
             } catch (thrown) {
-                out.textContent += <?= json_encode(_l('cdn.console.failed')) ?> + '\n';
+                write('<span class="console-exit">' + <?= json_encode(_l('cdn.console.failed')) ?> + '</span>\n\n');
             }
 
-            out.scrollTop = out.scrollHeight;
-            run.disabled  = false;
+            run.disabled = false;
         });
     })();
 </script>

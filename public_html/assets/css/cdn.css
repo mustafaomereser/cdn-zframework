@@ -971,6 +971,9 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
     margin: 0;
 }
 
+.console-out .console-echo { color: #7f95ff; font-weight: 600; }
+.console-out .console-exit { color: #6b7688; }
+
 .lang-switch { display: inline-flex; background: var(--surface-3); border-radius: var(--radius-sm); padding: 2px; }
 
 .lang-switch a {

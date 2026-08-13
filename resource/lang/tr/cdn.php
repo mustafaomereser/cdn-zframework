@@ -93,6 +93,7 @@ return [
         'allowed'  => 'İzinli:',
         'none-allowed' => 'Bu betik için hiçbir komut izinli değil — admin.console.allow bölümüne bakın.',
         'exit'     => 'çıkış',
+        'exited'   => '(komut, çıktısını bitirmeden isteği sonlandırdı)',
         'failed'   => 'İstek geri dönmedi.',
         'refused'  => 'Reddedildi: {reason}',
     ],

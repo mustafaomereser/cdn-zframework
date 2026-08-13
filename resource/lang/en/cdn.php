@@ -93,6 +93,7 @@ return [
         'allowed'  => 'Allowed:',
         'none-allowed' => 'Nothing is allowed for this script — see admin.console.allow.',
         'exit'     => 'exit',
+        'exited'   => '(the command ended the request before it finished printing)',
         'failed'   => 'The request did not come back.',
         'refused'  => 'Refused: {reason}',
     ],

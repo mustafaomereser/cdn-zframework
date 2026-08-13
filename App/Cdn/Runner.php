@@ -3,6 +3,7 @@
 namespace App\Cdn;
 
 use zFramework\Core\Facades\Auth;
+use zFramework\Kernel\Terminal;
 
 /**
  * Running `php terminal` and `php cdn` from the panel.
@@ -13,18 +14,28 @@ use zFramework\Core\Facades\Auth;
  * terminal, and removing it was one of the first things done here. What follows
  * is the same capability with the parts that made it indefensible taken out.
  *
- *   - Off unless `admin.console.enabled` says otherwise. A feature like this
- *     should be something somebody turned on, not something they inherited.
+ *   - Off unless `admin.console.enabled` says otherwise.
  *   - Operator only, behind the panel's own session and csrf.
  *   - An allowlist of first words. Not a denylist: a denylist is a list of the
  *     dangerous things somebody thought of.
- *   - No shell. proc_open is given an argument array, so nothing in the input
- *     is ever parsed as a pipe, a redirect or a second command - the worst a
- *     stray `;` can do is make a command not match the allowlist.
- *   - A timeout, because a command that never returns is a php-fpm worker that
- *     never returns.
- *   - Every run is an audit row: what was typed, by whom, and what it exited
- *     with.
+ *   - A timeout on the command, and an audit row per run.
+ *
+ * It runs **in this process**, not as a child. proc_open and friends are
+ * disabled on most shared hosting, and a feature that only works where the
+ * hosting is generous is a feature that does not work. Both entry points are
+ * plain static calls - `Terminal::begin()` and `Console::begin()` - and the
+ * request is already booted with everything they need, so there is nothing a
+ * subprocess was buying except isolation we cannot rely on having.
+ *
+ * What that costs, and what is done about it:
+ *
+ *   - Output is captured with an output buffer rather than read off a pipe.
+ *   - A command that calls exit() would take the response with it, so the
+ *     buffer is flushed as json from a shutdown handler.
+ *   - There is no killing it from outside. The timeout is set_time_limit, which
+ *     is the only one an in-process command respects.
+ *   - Statics the terminal keeps are saved and put back, so a command run here
+ *     cannot change what the rest of the request sees.
  *
  * What it is not is a sandbox. An allowed command can still do whatever that
  * command does - `cdn gc` deletes files, because that is what it is for. The
@@ -43,16 +54,17 @@ class Runner
     }
 
     /**
-     * The two entry points, and where they live.
+     * The two entry points.
      *
-     * @return array<string,string>
+     * Names rather than paths: nothing is spawned, so the files beside the
+     * project root are only what somebody types on their own machine. These map
+     * to Terminal::begin() and Console::begin().
+     *
+     * @return array
      */
     public static function scripts(): array
     {
-        return [
-            'terminal' => base_path('terminal'),
-            'cdn'      => base_path('cdn'),
-        ];
+        return ['cdn', 'terminal'];
     }
 
     /**
@@ -108,11 +120,14 @@ class Runner
      */
     public static function run(string $script, string $line): array
     {
-        $scripts = self::scripts();
+        if (!self::enabled()) return self::refuse('console-disabled');
 
-        if (!self::enabled())              return self::refuse('console-disabled');
-        if (!isset($scripts[$script]))     return self::refuse('unknown-script');
-        if (!is_file($scripts[$script]))   return self::refuse('missing-script');
+        if (!in_array($script, self::scripts(), true)) return self::refuse('unknown-script');
+
+        # parseCommands() writes to readline's history whether or not there is a
+        # terminal attached. Without the extension that is a fatal in the middle
+        # of a request, so it is a refusal with a reason instead.
+        if ($script === 'terminal' && !function_exists('readline_add_history')) return self::refuse('no-readline');
 
         $arguments = self::parse($line);
 
@@ -127,104 +142,120 @@ class Runner
             return self::refuse('not-allowed:' . $command);
         }
 
-        $binary  = self::php();
+        # A command that never returns is a worker that never returns. In this
+        # process the only limit that applies is php's own.
         $timeout = max(5, (int) Support::config('admin.console.timeout', 120));
-
-        # An argument array, not a string: there is no shell in this pipeline, so
-        # `; rm -rf /` is an argument that the command will not understand rather
-        # than a second command.
-        $process = @proc_open(
-            array_merge([$binary, $scripts[$script]], $arguments),
-            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-            $pipes,
-            base_path(),
-            null
-        );
-
-        if (!is_resource($process)) return self::refuse('spawn-failed');
-
-        stream_set_blocking($pipes[1], false);
-        stream_set_blocking($pipes[2], false);
-
-        $output   = '';
-        $deadline = time() + $timeout;
-        $code     = null;
-
-        while (true) {
-            $output .= (string) stream_get_contents($pipes[1]);
-            $output .= (string) stream_get_contents($pipes[2]);
-
-            $status = proc_get_status($process);
-
-            if (!$status['running']) {
-                $code = $status['exitcode'];
-                break;
-            }
-
-            if (time() >= $deadline) {
-                proc_terminate($process, 9);
-                $output .= "\n… timed out after {$timeout}s";
-                break;
-            }
-
-            usleep(50000);
-        }
-
-        # Whatever was still in the pipes when it exited.
-        $output .= (string) stream_get_contents($pipes[1]);
-        $output .= (string) stream_get_contents($pipes[2]);
-
-        foreach ($pipes as $pipe) if (is_resource($pipe)) fclose($pipe);
-
-        proc_close($process);
+        @set_time_limit($timeout);
 
         $line = $script . ' ' . implode(' ', $arguments);
 
+        # The terminal keeps its parsed command in statics, and this request has
+        # its own work to do afterwards. Saved and put back.
+        $keep = [
+            'commands'   => Terminal::$commands,
+            'parameters' => Terminal::$parameters,
+            'textlist'   => Terminal::$textlist,
+            'terminate'  => Terminal::$terminate,
+        ];
+
+        # If the command exits - and some do - the response would end here with
+        # nothing in it. This hands back what was printed before that happened.
+        $flushed = false;
+
+        register_shutdown_function(function () use (&$flushed, $line) {
+            if ($flushed) return;
+
+            $output = '';
+            while (ob_get_level() > 0) $output = ob_get_clean() . $output;
+
+            echo json_encode([
+                'ok'      => false,
+                'code'    => null,
+                'command' => $line,
+                'output'  => self::web($output) . "
+" . _l('cdn.console.exited'),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        });
+
+        ob_start();
+
+        try {
+            if ($script === 'terminal') {
+                # --web makes Terminal::text() colour with markup instead of ansi
+                # escapes, which is the difference between a browser showing
+                # colour and showing `\e[32m`.
+                Terminal::begin(array_merge(['terminal'], $arguments, ['--web']));
+            } else {
+                # Console has parameters of its own and never reads the
+                # terminal's, so this only reaches Terminal::text().
+                Terminal::$parameters = ['--web'];
+
+                Console::begin(array_merge(['cdn'], $arguments));
+            }
+
+            $failed = null;
+        } catch (\Throwable $thrown) {
+            # A command that throws is one command failing, not the panel
+            # failing. The message is the useful part of it.
+            $failed = get_class($thrown) . ': ' . $thrown->getMessage();
+        }
+
+        $output  = (string) ob_get_clean();
+        $flushed = true;
+
+        Terminal::$commands   = $keep['commands'];
+        Terminal::$parameters = $keep['parameters'];
+        Terminal::$textlist   = $keep['textlist'];
+        Terminal::$terminate  = $keep['terminate'];
+
         Operator::audit('console', 'console', ['id' => Auth::id(), 'name' => $line], [
             'command' => $line,
-            'exit'    => $code,
+            'failed'  => $failed,
         ]);
 
         return [
-            'ok'      => $code === 0,
-            'code'    => $code,
-            'output'  => self::plain($output),
+            'ok'      => $failed === null,
+            'code'    => $failed === null ? 0 : 1,
+            'output'  => self::web($output) . ($failed === null ? '' : "
+" . self::escape($failed)),
             'command' => $line,
         ];
     }
 
     /**
-     * The php binary to spawn.
+     * The terminal's output, safe to put in the page.
      *
-     * PHP_BINARY is the running interpreter, which is the right one by
-     * definition - except under some server APIs where it is the web server.
-     * Then it is whatever config says, and the console reports the failure
-     * rather than guessing.
+     * `--web` wraps colours in <font> tags rather than ansi escapes, so the
+     * output is markup - and some of it is data. A bucket named with a script
+     * tag would be stored by one tenant and rendered in the operator's browser,
+     * which is the whole shape of a stored xss.
      *
-     * @return string
-     */
-    private static function php(): string
-    {
-        $configured = (string) Support::config('admin.console.php', '');
-
-        if ($configured !== '') return $configured;
-
-        if (PHP_BINARY && !in_array(basename(PHP_BINARY), ['httpd', 'apache2', 'nginx'], true)) return PHP_BINARY;
-
-        return 'php';
-    }
-
-    /**
-     * Strip the terminal's colour codes.
-     *
-     * Terminal::text writes ansi escapes; in a browser they are line noise.
+     * So everything is escaped, and then exactly two tags are let back in: the
+     * colour font tag the terminal writes, with a hex colour and nothing else.
      *
      * @param string $output
      * @return string
      */
-    private static function plain(string $output): string
+    private static function web(string $output): string
     {
-        return (string) preg_replace('/\x1b\[[0-9;]*m/', '', $output);
+        $escaped = self::escape($output);
+
+        $escaped = preg_replace('/&lt;font color=&#039;(#[0-9a-f]{3,8})&#039;&gt;/i', '<font color="$1">', $escaped);
+        $escaped = str_replace('&lt;/font&gt;', '</font>', $escaped);
+
+        # Terminal::clear() prints fifty newlines before every command.
+        return trim($escaped, "
+
+");
+    }
+
+    /**
+     * @param string $text
+     * @return string
+     */
+    private static function escape(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
     }
 
     /**
