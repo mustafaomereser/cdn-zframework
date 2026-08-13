@@ -26,6 +26,11 @@ namespace App\Cdn;
 class Hosting
 {
     /**
+     * What the last call did, for the page that offers to diagnose it.
+     */
+    private static array $last = [];
+
+    /**
      * @return bool
      */
     public static function configured(): bool
@@ -93,10 +98,15 @@ class Hosting
 
         $response = curl_exec($curl);
         $error    = curl_errno($curl) ? curl_error($curl) : null;
+        $code     = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
 
         curl_close($curl);
 
-        if ($error !== null) return ['status' => 0, 'errors' => [$error]];
+        # Kept for the test button. Every failure here has a different fix and
+        # "it did not answer" is the one message that helps with none of them.
+        self::$last = ['error' => $error, 'code' => $code, 'body' => is_string($response) ? substr($response, 0, 400) : null];
+
+        if ($error !== null) return null;
 
         $decoded = json_decode((string) $response, true);
 
@@ -148,6 +158,56 @@ class Hosting
         }
 
         return count($out) ? $out : null;
+    }
+
+    /**
+     * Ask cPanel one question and report exactly how it went.
+     *
+     * The page used to say "cPanel did not answer" for every failure, which is
+     * the one sentence that helps with none of them: a blocked port, a wrong
+     * hostname, a token from another account and a token with the wrong
+     * permissions each have a different fix and each says so here.
+     *
+     * @return array{ok:bool,message:string,detail:string|null}
+     */
+    public static function test(): array
+    {
+        if (!self::configured()) return ['ok' => false, 'message' => 'not-configured', 'detail' => null];
+
+        $response = self::call('ResourceUsage/get_usages');
+        $last     = self::$last;
+
+        if (($response['status'] ?? 0)) return ['ok' => true, 'message' => 'ok', 'detail' => null];
+
+        # curl never got an answer: the port, the hostname, or DNS.
+        if (($last['error'] ?? null) !== null) {
+            return [
+                'ok'      => false,
+                'message' => str_contains(strtolower($last['error']), 'timed out') || str_contains(strtolower($last['error']), 'connect')
+                    ? 'unreachable'
+                    : 'curl',
+                'detail'  => $last['error'],
+            ];
+        }
+
+        # It answered, and said no.
+        if (($last['code'] ?? 0) === 401 || ($last['code'] ?? 0) === 403) {
+            return ['ok' => false, 'message' => 'rejected', 'detail' => 'HTTP ' . $last['code']];
+        }
+
+        if (($last['code'] ?? 0) >= 400) {
+            return ['ok' => false, 'message' => 'http', 'detail' => 'HTTP ' . $last['code']];
+        }
+
+        # A 200 that is not the json this expects is nearly always a login page:
+        # the address is a website, not the control panel.
+        $errors = (array) ($response['errors'] ?? []);
+
+        return [
+            'ok'      => false,
+            'message' => is_array($response) && count($errors) ? 'refused' : 'not-cpanel',
+            'detail'  => count($errors) ? implode(' ', array_map('strval', $errors)) : ($last['body'] ?? null),
+        ];
     }
 
     /**

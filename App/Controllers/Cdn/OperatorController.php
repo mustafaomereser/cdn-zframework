@@ -237,6 +237,30 @@ class OperatorController
     }
 
     /**
+     * Ask cPanel one question and say exactly how it went.
+     *
+     * @return mixed
+     */
+    public function cpanelTest(): mixed
+    {
+        $result = \App\Cdn\Hosting::test();
+
+        if ($result['ok']) {
+            Flash::success(_l('cdn.cpanel.test-ok'));
+
+            return back();
+        }
+
+        Flash::danger(_l('cdn.cpanel.test-' . $result['message']));
+
+        # The raw line underneath, because the fix is usually in it - a refused
+        # connection names the port, a rejection names the code.
+        if ($result['detail']) Flash::danger($result['detail']);
+
+        return back();
+    }
+
+    /**
      * Add or remove a cron line through cPanel.
      *
      * @return mixed

@@ -143,6 +143,7 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin') . '/admin', '/cd
         Route::get('/system', [OperatorController::class, 'system'])->name('system');
         Route::get('/cpanel', [OperatorController::class, 'cpanel'])->name('cpanel');
         Route::post('/cpanel', [OperatorController::class, 'cpanelSave'])->name('cpanel.save');
+        Route::post('/cpanel/test', [OperatorController::class, 'cpanelTest'])->name('cpanel.test');
         Route::post('/cpanel/cron', [OperatorController::class, 'cpanelCron'])->name('cpanel.cron');
 
         Route::get('/maintenance', [OperatorController::class, 'maintenance'])->name('maintenance');

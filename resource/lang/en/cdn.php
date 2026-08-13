@@ -29,6 +29,16 @@ return [
     ],
 
     'cpanel' => [
+        'test'                => 'Test the connection',
+        'test-ok'             => 'Connected. cPanel answered.',
+        'test-not-configured' => 'Fill in the host, the username and the token first.',
+        'test-unreachable'    => 'Could not reach port 2083 on that host. Either the hostname is wrong, or this server is not allowed to make outbound connections to it - some hosts block that, and the fix is a support ticket.',
+        'test-curl'           => 'The connection failed before cPanel could answer.',
+        'test-rejected'       => 'cPanel refused the token. It has to be created by this account (cPanel -> Security -> Manage API Tokens) and pasted whole - a token made under a different account, or a reseller/WHM token, will not work here.',
+        'test-http'           => 'cPanel answered with an error code.',
+        'test-refused'        => 'cPanel answered and refused the request.',
+        'test-not-cpanel'     => 'Something answered on that address, but it was not cPanel - usually a website rather than the control panel. Use the host you log in to cPanel on, without https:// and without a port.',
+        'no-answer-hint'      => 'Press “Test the connection” - it says which of these it is.',
         'lede'             => 'This installation’s hosting account: what it is using, and the cron that keeps it tidy.',
         'connection'       => 'Connection',
         'connection-lede'  => 'A cPanel API token, kept here rather than in a php file - it belongs to this installation and nowhere else.',

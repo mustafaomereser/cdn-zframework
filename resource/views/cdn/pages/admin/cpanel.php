@@ -57,12 +57,26 @@
     <div class="col-lg-7">
         <div class="card mb-3">
             <div class="card-body">
-                <h6>{{ _l('cdn.cpanel.usage') }}</h6>
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <h6 class="mb-0">{{ _l('cdn.cpanel.usage') }}</h6>
+
+                    <?php if ($configured) : ?>
+                        <form method="POST" action="{{ route('cdn-admin.operator.cpanel.test') }}">
+                            <?= csrf() ?>
+                            <button class="btn btn-sm btn-outline-secondary text-nowrap">
+                                <i class="bi bi-plug"></i> {{ _l('cdn.cpanel.test') }}
+                            </button>
+                        </form>
+                    <?php endif ?>
+                </div>
 
                 <?php if (!$configured) : ?>
                     <p class="hint mb-0">{{ _l('cdn.cpanel.not-connected') }}</p>
                 <?php elseif (!$usage) : ?>
-                    <div class="alert alert-warning small mb-0">{{ _l('cdn.cpanel.no-answer') }}</div>
+                    <div class="alert alert-warning small mb-0">
+                        {{ _l('cdn.cpanel.no-answer') }}
+                        <div class="mt-1">{{ _l('cdn.cpanel.no-answer-hint') }}</div>
+                    </div>
                 <?php else : ?>
                     <div class="row g-3">
                         <?php foreach (['disk', 'files', 'bandwidth'] as $metric) : ?>

@@ -29,6 +29,16 @@ return [
     ],
 
     'cpanel' => [
+        'test'                => 'Bağlantıyı dene',
+        'test-ok'             => 'Bağlandı. cPanel cevap verdi.',
+        'test-not-configured' => 'Önce sunucu adını, kullanıcı adını ve anahtarı doldur.',
+        'test-unreachable'    => 'O sunucunun 2083 portuna ulaşılamadı. Ya sunucu adı yanlış, ya da bu sunucunun dışarı bağlantı kurmasına izin verilmiyor - bazı barındırmalar bunu kapatır, çözümü destek talebi açmaktır.',
+        'test-curl'           => 'Bağlantı, cPanel cevap veremeden başarısız oldu.',
+        'test-rejected'       => 'cPanel anahtarı kabul etmedi. Anahtarın bu hesap tarafından oluşturulmuş (cPanel -> Security -> Manage API Tokens) ve tam olarak yapıştırılmış olması gerekir - başka hesapta oluşturulmuş ya da bayi/WHM anahtarı burada çalışmaz.',
+        'test-http'           => 'cPanel bir hata koduyla cevap verdi.',
+        'test-refused'        => 'cPanel cevap verdi ve isteği reddetti.',
+        'test-not-cpanel'     => 'O adreste bir şey cevap verdi ama cPanel değildi - genelde kontrol paneli yerine bir web sitesi. cPanel’e giriş yaptığın sunucu adını yaz; https:// olmadan ve portsuz.',
+        'no-answer-hint'      => '“Bağlantıyı dene” düğmesine bas - hangisi olduğunu söyler.',
         'lede'             => 'Bu kurulumun barındırma hesabı: ne kullanıyor ve onu derli toplu tutan cron.',
         'connection'       => 'Bağlantı',
         'connection-lede'  => 'cPanel API anahtarı, php dosyasında değil burada tutulur - bu kuruluma aittir, başka yere değil.',
