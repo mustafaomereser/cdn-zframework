@@ -20,6 +20,7 @@ $navTabs = [
     'cdn-admin.operator.files'    => ['bi-file-earmark', 'files'],
     'cdn-admin.operator.system'      => ['bi-cpu',       'system'],
     'cdn-admin.operator.maintenance' => ['bi-tools',     'maintenance'],
+    'cdn-admin.operator.cpanel'      => ['bi-hdd-network', 'cpanel'],
     'cdn-admin.operator.audits'   => ['bi-list-ul',  'audits'],
 ];
 

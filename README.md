@@ -557,6 +557,7 @@ in the sidebar — with four pages, and a fifth when the console is on:
 | Files | every file in the installation, searchable, each row saying which bucket and which project |
 | Server | what the machine is: PHP version and its limits, opcache, web server, processors, load, uptime, RAM, database version, the extensions this application asks for, and every directory it writes to — grouped by the filesystem they sit on, with files and bytes each holds |
 | Maintenance | the hourly cron's tasks, one button each, when each last ran, and what there is to reclaim right now |
+| cPanel | the hosting account: its disk, **file (inode)** and bandwidth quotas as the control panel reports them, and its cron jobs — add the housekeeping schedule, or remove a line, without leaving the panel |
 | Log | who changed what, with the numbers before and after |
 | Console | run `php cdn` and `php terminal` commands — off by default, see below |
 
@@ -974,20 +975,31 @@ quota reads "unlimited".
 Neither is visible to PHP; they are filesystem quotas. cPanel knows them and
 will say so to a token belonging to the account:
 
+Set it up under **Administration → cPanel** rather than in this file: a token
+belongs to one installation, and asking somebody to edit a php file over ssh to
+paste one is asking them not to. It is stored in `cdn_settings` and never
+rendered back into the page.
+
 ```php
+// config/cdn.php only holds the defaults; the panel overrides them.
 'hosting' => [
     'cpanel' => [
-        'enabled'  => true,
-        'domain'   => 'server.example.com',   // cPanel hostname, no port
-        'username' => 'account',
-        'token'    => '…',                    // cPanel → Security → Manage API Tokens
+        'enabled'  => false,
+        'domain'   => '',   // cPanel hostname, no port — 2083 is added
+        'username' => '',
+        'token'    => '',   // cPanel → Security → Manage API Tokens
     ],
 ],
 ```
 
-One https call, made only on the page that shows it, with a failure showing as
-a missing block rather than a broken page. Off by default — without it the page
-shows what it can count for itself and says why the rest is missing.
+One https call with a five-second connect timeout, made only on the pages that
+show it; a failure is a missing block rather than a broken page. Off by default
+— without it the pages show what they can count for themselves and say why the
+rest is missing.
+
+The same page manages the account's **cron jobs**: it lists them, marks the one
+that runs this installation's housekeeping, and can set or remove it. On a host
+with no cPanel the line to paste is printed there too.
 
 ### api, webhooks, gc
 

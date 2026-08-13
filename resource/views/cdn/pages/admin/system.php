@@ -155,8 +155,8 @@ foreach ($disks as $diskName => $disk) {
 
                             <div class="value notranslate" translate="no">
                                 <?= $metric === 'files'
-                                    ? number_format($usage['used'])
-                                    : File::humanFileSize($usage['used']) ?>
+                                    ? number_format((int) $usage['used'])
+                                    : File::humanFileSize((int) $usage['used']) ?>
                             </div>
 
                             <?php if ($usage['maximum'] === null) : ?>
@@ -168,8 +168,8 @@ foreach ($disks as $diskName => $disk) {
                                 <div class="hint mt-1 notranslate" translate="no">
                                     <?= _l('cdn.common.of') ?>
                                     <?= $metric === 'files'
-                                        ? number_format($usage['maximum'])
-                                        : File::humanFileSize($usage['maximum']) ?>
+                                        ? number_format((int) $usage['maximum'])
+                                        : File::humanFileSize((int) $usage['maximum']) ?>
                                     · <?= $usage['share'] ?>%
                                 </div>
                             <?php endif ?>
@@ -209,7 +209,7 @@ foreach ($disks as $diskName => $disk) {
                     <div class="text-end">
                         <div class="label">{{ _l('cdn.system.ours') }}</div>
                         <div class="mt-1 notranslate" translate="no">
-                            <b><?= File::humanFileSize($volume['ours']) ?></b>
+                            <b><?= File::humanFileSize((int) $volume['ours']) ?></b>
                             <span class="hint"><?= number_format($volume['files']) ?> <?= _l('cdn.system.file-count') ?></span>
                         </div>
                     </div>

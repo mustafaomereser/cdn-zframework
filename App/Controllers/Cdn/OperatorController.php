@@ -174,6 +174,110 @@ class OperatorController
     }
 
     /**
+     * The hosting account: what it is using, and the cron that keeps this
+     * installation tidy.
+     *
+     * @return mixed
+     */
+    public function cpanel(): mixed
+    {
+        return view('cdn.pages.admin.cpanel', [
+            'credentials' => \App\Cdn\Hosting::credentials(),
+            'configured'  => \App\Cdn\Hosting::configured(),
+            'usage'       => \App\Cdn\Hosting::usage(),
+            'crons'       => \App\Cdn\Hosting::crons(),
+            'command'     => \App\Cdn\Hosting::command(),
+        ]);
+    }
+
+    /**
+     * Save the connection.
+     *
+     * @return mixed
+     */
+    public function cpanelSave(): mixed
+    {
+        if (request('forget')) {
+            \App\Cdn\Settings::put([
+                'hosting.cpanel.enabled'  => null,
+                'hosting.cpanel.domain'   => null,
+                'hosting.cpanel.username' => null,
+                'hosting.cpanel.token'    => null,
+            ]);
+
+            Operator::audit('cpanel', 'system', ['id' => null, 'name' => 'cpanel'], ['forget' => true]);
+
+            Flash::success(_l('cdn.cpanel.forgotten'));
+
+            return back();
+        }
+
+        $values = [
+            'hosting.cpanel.enabled'  => request('enabled') ? '1' : '0',
+            'hosting.cpanel.domain'   => trim((string) request('domain')),
+            'hosting.cpanel.username' => trim((string) request('username')),
+        ];
+
+        # An empty token field keeps the stored one: the form never renders it,
+        # so an empty box means "unchanged" rather than "delete it".
+        if (trim((string) request('token')) !== '') $values['hosting.cpanel.token'] = trim((string) request('token'));
+
+        \App\Cdn\Settings::put($values);
+
+        # Audited without the token. What is worth recording is that somebody
+        # pointed this installation at an account, not the secret they used.
+        Operator::audit('cpanel', 'system', ['id' => null, 'name' => $values['hosting.cpanel.domain']], [
+            'username' => $values['hosting.cpanel.username'],
+            'enabled'  => $values['hosting.cpanel.enabled'] === '1',
+        ]);
+
+        Flash::success(_l('cdn.alerts.saved'));
+
+        return back();
+    }
+
+    /**
+     * Add or remove a cron line through cPanel.
+     *
+     * @return mixed
+     */
+    public function cpanelCron(): mixed
+    {
+        $action = (string) request('action');
+
+        if ($action === 'remove') {
+            $result = \App\Cdn\Hosting::removeCron((int) request('key'));
+
+            if ($result['ok']) Flash::success(_l('cdn.cpanel.cron-removed'));
+            else Flash::danger(_l('cdn.cpanel.cron-failed', ['error' => $result['error'] ?? '']));
+
+            Operator::audit('cpanel-cron', 'system', ['id' => null, 'name' => 'remove'], $result);
+
+            return back();
+        }
+
+        $schedule = (string) (request('schedule') ?: '0 * * * *');
+
+        # Five fields, each of them one of the shapes cron accepts. Whatever the
+        # select sends is checked rather than trusted: it is a string that ends
+        # up in a crontab.
+        if (!preg_match('/^[\d*\/,\- ]{1,60}$/', $schedule) || count(explode(' ', trim($schedule))) !== 5) {
+            Flash::danger(_l('cdn.cpanel.bad-schedule'));
+
+            return back();
+        }
+
+        $result = \App\Cdn\Hosting::installCron($schedule);
+
+        if ($result['ok']) Flash::success(_l('cdn.cpanel.cron-installed'));
+        else Flash::danger(_l('cdn.cpanel.cron-failed', ['error' => $result['error'] ?? '']));
+
+        Operator::audit('cpanel-cron', 'system', ['id' => null, 'name' => $schedule], $result);
+
+        return back();
+    }
+
+    /**
      * What was changed, and by whom.
      *
      * @return mixed
