@@ -186,6 +186,7 @@ return [
         'buckets-lede'   => 'A bucket is a folder with rules. Its name is the segment after the project.',
         'no-buckets'     => 'No buckets in this project yet.',
         'own-quota'      => 'this project only',
+        'own-quota-note' => 'Projects with a quota of their own are measured against it and are not counted here.',
         'account-wide'   => 'account-wide',
         'rename'         => 'Rename',
         'rename-lede'    => 'The URL name is not touched — it is in every address this project has ever served.',
@@ -371,6 +372,9 @@ return [
             'transform-help' => 'Lets <code>?w=400</code> and friends work. Turn off for buckets that hold no images.',
 
             'caching'      => 'Caching',
+            'keep-for-options' => [300 => '5 minutes', 3600 => '1 hour', 86400 => '1 day', 604800 => '1 week', 2592000 => '30 days', 31536000 => '1 year'],
+            'hotlink-holder'   => 'example.com, shop.example.com',
+            'cors-holder'      => '* or app.example.com',
             'keep-for'     => 'Browsers may keep a copy for',
             'never-recheck' => 'Never re-check (immutable)',
             'cache-note'   => 'A long cache is faster and cheaper, but nothing you do here can reach a copy already sitting in somebody\'s browser. If you overwrite files in place, keep this short. If your filenames change when the content changes, make it a year.',

@@ -85,6 +85,42 @@
     <pre><code><?= $host . $prefix ?>/<?= $project ?>/dosyalar/rapor.pdf?download=1</code></pre>
 </section>
 
+<section id="projects">
+    <h2>Projeler</h2>
+
+    <p>
+        Proje, adreslerinin ilk parçası ve bir ad alanı. Bucket'ların, dosyaların, anahtarların ve kotan
+        ona bağlı. Hesap açtığında bir tane hazır gelir; ikincisini panelde <em>Projeler → Yeni proje</em>
+        ile açarsın.
+    </p>
+
+    <p>
+        <b>Her projenin adresi hesabının adıyla başlar.</b> İlk projen hesap adının kendisidir, sonrakiler
+        <code>&lt;hesap&gt;-&lt;proje&gt;</code> olur:
+    </p>
+
+    <pre><code><?= $host . $prefix ?>/<?= $slug ?>/logolar/amblem.svg
+<?= $host . $prefix ?>/<?= $slug ?>-test/logolar/amblem.svg</code></pre>
+
+    <p>
+        Böylece bir URL kimin olduğunu söyler ve kimse bir başkasının istediği adı kapamaz. URL adı proje
+        oluşturulurken belirlenir ve <b>sonradan değişmez</b> — o projenin bugüne kadar sunduğu her adreste
+        geçiyor. Projenin görünen adını dilediğin zaman değiştirebilirsin, adresleri etkilemez.
+    </p>
+
+    <div class="note">
+        <b>Ana projen silinemez ve yeniden adlandırılamaz.</b> Adı senin ad alanın ve diğer projelerin adı
+        ondan türüyor. Diğer projeleri, kaç tane kalırsa kalsın silebilirsin — silmek bucket'larını,
+        dosyalarını ve anahtarlarını da götürür.
+    </div>
+
+    <p>
+        Panelin sol üstündeki seçici, panelin hangi projeyi gösterdiğini belirler: dosyalar, bucket'lar,
+        anahtarlar ve hareketler seçili projeye göre daralır. <em>Tüm projeler</em> hepsini bir arada
+        gösterir.
+    </p>
+</section>
+
 <section id="images">
     <h2>Görsel boyutları</h2>
 
@@ -145,6 +181,33 @@
      srcset="<?= $host . $prefix ?>/<?= $project ?>/fotograflar/kapak.jpg?w=600 600w,
              <?= $host . $prefix ?>/<?= $project ?>/fotograflar/kapak.jpg?w=1200 1200w"
      sizes="(max-width: 600px) 100vw, 600px" alt=""&gt;</code></pre>
+</section>
+
+<section id="minify">
+    <h2>CSS ve JS</h2>
+
+    <p>
+        Stil ve script dosyaların küçültülmüş hâlde sunulabilir. Adresin sonuna <code>?min=1</code> ekle:
+    </p>
+
+    <pre><code><?= $host . $prefix ?>/<?= $slug ?>/assets/site.css?min=1</code></pre>
+
+    <p>
+        Bucket ayarlarındaki <em>CSS ve JS'i küçült</em> seçeneğini açarsan parametre yazmana gerek kalmaz,
+        düz adres küçültülmüş hâli verir. <code>?min=0</code> her durumda orijinali döndürür — bir dosya
+        bozulmuş görünüyorsa ilk bakacağın yer burasıdır.
+    </p>
+
+    <div class="note">
+        <b>Yüklediğin dosyaya dokunulmaz.</b> Küçültülmüş kopya, yeniden boyutlandırılmış bir görsel gibi
+        bir türevdir: ayrı saklanır, bucket'ı temizleyince silinir ve gerektiğinde yeniden üretilir.
+        Küçültme bir dosyayı bozarsa ya da işe yaramazsa orijinal sunulur.
+    </div>
+
+    <p>
+        Adı zaten <code>*.min.js</code> olan dosyalar atlanır. Metin dosyaları <code>charset=utf-8</code>
+        ile sunulur, yani Türkçe karakterler tarayıcının tahminine kalmaz.
+    </p>
 </section>
 
 <section id="buckets">
@@ -404,6 +467,45 @@ $adres  = $cevap['files'][0]['url'];</code></pre>
     </div>
 </section>
 
+<section id="quotas">
+    <h2>Kotalar ve sınırlar</h2>
+
+    <p>İki kota var, ikisi de <b>hesabına</b> ait ve projelerin arasında paylaşılır:</p>
+
+    <table class="table">
+        <thead>
+            <tr><th>Kota</th><th>Nerede uygulanır</th><th>Dolunca ne olur</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Depolama</td><td>yükleme</td><td>yükleme reddedilir</td></tr>
+            <tr><td>Aylık trafik</td><td>teslim</td><td>adresler ay dönene kadar <code>509</code> döner</td></tr>
+        </tbody>
+    </table>
+
+    <p>
+        <b>Yeni proje açmak ek alan getirmez.</b> Trafik sayacı aya bağlıdır ve ay değişince kendiliğinden
+        sıfırlanır — bunun için bir cron beklemez. Kullanımını sol menüde ve <em>Ayarlar</em> sayfasında
+        görürsün; işletmeci istersen tek bir projeye ayrı bir kota da tanımlayabilir, o zaman proje
+        sayfasında "yalnız bu proje" diye yazar.
+    </p>
+
+    <h3>Askıya alma</h3>
+
+    <p>
+        Bir kurulumun işletmecisi bir projeyi ya da hesabı askıya alabilir. Askıdayken:
+    </p>
+
+    <ul>
+        <li>adresleri <code>403</code> döner,</li>
+        <li>içine dosya yüklenemez ve içinden dosya silinemez,</li>
+        <li>dosyalarına dokunulmaz — proje geri açıldığı an her şey geri gelir.</li>
+    </ul>
+
+    <p>
+        Sebebi panelde projenin sayfasında yazar. Hesabın askıdaysa giriş ekranında görürsün.
+    </p>
+</section>
+
 <section id="errors">
     <h2>Hatalar</h2>
 
@@ -444,7 +546,8 @@ php cdn purge bucket=... prefix=...
 php cdn gc                               # kullanılmayan dosyalar, süresi geçmiş yüklemeler
 php cdn rollup                           # dünkü trafiği grafiklere işler
 php cdn verify --fix                     # kayıtları diskle karşılaştırır, sayaçları düzeltir
-php cdn stats days=7</code></pre>
+php cdn stats days=7
+php cdn translate lang=de|all                # arayüzü makineyle çevirir</code></pre>
 
     <p>Bakım işleri saatlik cron ile:</p>
     <pre><code>0 * * * * php /yol/cron/cdn.php</code></pre>

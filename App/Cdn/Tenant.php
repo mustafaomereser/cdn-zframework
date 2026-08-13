@@ -145,6 +145,13 @@ class Tenant
         # the account's bill, and it does not change because somebody is looking
         # at one project.
         foreach (self::projects() as $project) {
+            # Except a project with numbers of its own. It is measured against
+            # its own ceiling, so counting it here too would spend the shared
+            # allowance twice - give a project 50 GB and the account it belongs
+            # to would watch its own 5 GB fill up with bytes that are not
+            # charged to it.
+            if (($project['quota_mode'] ?? 'account') === 'custom') continue;
+
             $used += (int) $project['storage_used'];
 
             # The counter belongs to a month. A row still carrying last month's

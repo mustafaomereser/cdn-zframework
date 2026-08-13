@@ -186,6 +186,7 @@ return [
         'buckets-lede'   => "Bucket, kuralları olan bir klasördür. Adı, projeden sonraki parçadır.",
         'no-buckets'     => "Bu projede henüz bucket yok.",
         'own-quota'      => 'yalnız bu proje',
+        'own-quota-note' => 'Kendi kotası olan projeler o kotaya göre ölçülür ve buraya dahil edilmez.',
         'account-wide'   => 'hesap geneli',
         'rename'         => 'Yeniden adlandır',
         'rename-lede'    => 'URL adına dokunulmaz — bu projenin bugüne kadar sunduğu her adreste o geçiyor.',
@@ -371,6 +372,9 @@ return [
             'transform-help' => '<code>?w=400</code> ve benzerlerinin çalışmasını sağlar. Görsel tutmayan bucket\'larda kapat.',
 
             'caching'      => 'Önbellekleme',
+            'keep-for-options' => [300 => '5 dakika', 3600 => '1 saat', 86400 => '1 gün', 604800 => '1 hafta', 2592000 => '30 gün', 31536000 => '1 yıl'],
+            'hotlink-holder'   => 'ornek.com, magaza.ornek.com',
+            'cors-holder'      => '* ya da app.ornek.com',
             'keep-for'     => 'Tarayıcılar kopyayı ne kadar saklasın',
             'never-recheck' => 'Bir daha kontrol etme (değişmez)',
             'cache-note'   => 'Uzun önbellek daha hızlı ve ucuzdur, ama burada yapacağın hiçbir şey birinin tarayıcısında duran kopyaya ulaşamaz. Dosyaların üzerine yazıyorsan bunu kısa tut. Dosya adın içerikle birlikte değişiyorsa bir yıl yap.',

@@ -86,6 +86,41 @@
     <pre><code><?= $host . $prefix ?>/<?= $project ?>/files/report.pdf?download=1</code></pre>
 </section>
 
+<section id="projects">
+    <h2>Projects</h2>
+
+    <p>
+        A project is the first segment of your URLs, and a namespace: buckets, files, keys and your quota
+        all belong to one. You get one when you sign up; make a second in the panel under
+        <em>Projects → New project</em>.
+    </p>
+
+    <p>
+        <b>Every project's URL starts with your account's name.</b> Your first project is that name; the
+        rest are <code>&lt;account&gt;-&lt;project&gt;</code>:
+    </p>
+
+    <pre><code><?= $host . $prefix ?>/<?= $slug ?>/logos/mark.svg
+<?= $host . $prefix ?>/<?= $slug ?>-staging/logos/mark.svg</code></pre>
+
+    <p>
+        So a URL says whose it is, and nobody can take a name somebody else wanted. The URL name is decided
+        when the project is created and <b>never changes</b> — it is in every address that project has ever
+        served. The display name can be changed whenever you like; addresses are unaffected.
+    </p>
+
+    <div class="note">
+        <b>Your main project cannot be deleted or renamed.</b> Its name is your namespace and every other
+        project's is derived from it. The rest can be deleted, however few are left — and deleting one takes
+        its buckets, files and keys with it.
+    </div>
+
+    <p>
+        The switcher at the top of the sidebar decides what the panel is showing: files, buckets, keys and
+        activity are all narrowed to the selected project. <em>All projects</em> puts them back together.
+    </p>
+</section>
+
 <section id="images">
     <h2>Image sizes</h2>
 
@@ -145,6 +180,31 @@
      srcset="<?= $host . $prefix ?>/<?= $project ?>/photos/hero.jpg?w=600 600w,
              <?= $host . $prefix ?>/<?= $project ?>/photos/hero.jpg?w=1200 1200w"
      sizes="(max-width: 600px) 100vw, 600px" alt=""&gt;</code></pre>
+</section>
+
+<section id="minify">
+    <h2>CSS and JS</h2>
+
+    <p>Stylesheets and scripts can be served minified. Add <code>?min=1</code>:</p>
+
+    <pre><code><?= $host . $prefix ?>/<?= $slug ?>/assets/site.css?min=1</code></pre>
+
+    <p>
+        Turn on <em>Minify css and js</em> in the bucket and the plain URL serves the smaller copy with no
+        parameter at all. <code>?min=0</code> always returns the original — which is the first thing to try
+        when a file looks mangled.
+    </p>
+
+    <div class="note">
+        <b>The file you uploaded is never touched.</b> The minified copy is a derivative, like a resized
+        image: stored separately, cleared when you clear the bucket, rebuilt when it is needed. If minifying
+        breaks a file or does not make it smaller, the original is served.
+    </div>
+
+    <p>
+        Anything already named <code>*.min.js</code> is skipped. Text files are served with
+        <code>charset=utf-8</code>, so non-ascii characters are not left to the browser to guess.
+    </p>
 </section>
 
 <section id="buckets">
@@ -406,6 +466,44 @@ $url      = $response['files'][0]['url'];</code></pre>
     </div>
 </section>
 
+<section id="quotas">
+    <h2>Quotas and limits</h2>
+
+    <p>Two of them, both belonging to <b>your account</b> and shared by its projects:</p>
+
+    <table class="table">
+        <thead>
+            <tr><th>Quota</th><th>Enforced at</th><th>What happens when it is spent</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Storage</td><td>upload</td><td>the upload is refused</td></tr>
+            <tr><td>Monthly transfer</td><td>delivery</td><td>URLs answer <code>509</code> until the month rolls over</td></tr>
+        </tbody>
+    </table>
+
+    <p>
+        <b>Creating a project does not add storage.</b> The transfer counter belongs to a month and starts
+        again when the month does, with no cron run to wait for. You can see where you are in the sidebar
+        and on the <em>Settings</em> page. An operator can give one project a quota of its own, and the
+        project's page then says "this project only".
+    </p>
+
+    <h3>Suspension</h3>
+
+    <p>The operator of an installation can suspend a project or an account. While suspended:</p>
+
+    <ul>
+        <li>its URLs answer <code>403</code>,</li>
+        <li>nothing can be uploaded to it or deleted from it,</li>
+        <li>its files are untouched — everything comes back the moment it is restored.</li>
+    </ul>
+
+    <p>
+        The reason is on the project's page in the panel. If the account itself is suspended, you see it at
+        sign-in.
+    </p>
+</section>
+
 <section id="errors">
     <h2>Errors</h2>
 
@@ -446,7 +544,8 @@ php cdn purge bucket=... prefix=...
 php cdn gc                               # unused files, expired uploads
 php cdn rollup                           # yesterday's traffic into the charts
 php cdn verify --fix                     # records against the disk, recompute counters
-php cdn stats days=7</code></pre>
+php cdn stats days=7
+php cdn translate lang=de|all             # machine-translate the interface</code></pre>
 
     <p>Housekeeping runs hourly from cron:</p>
     <pre><code>0 * * * * php /path/to/cron/cdn.php</code></pre>

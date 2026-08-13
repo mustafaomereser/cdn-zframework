@@ -39,9 +39,7 @@
                         <input class="form-control" value="<?= e($formProject['name'], false) ?>" disabled>
                         <input type="hidden" name="project" value="<?= $formProject['id'] ?>">
                         <div class="form-text">
-                            <?= isset($bucket['id'])
-                                ? 'A bucket cannot move — its project is in every URL it serves.'
-                                : 'Add more projects in Settings to separate namespaces.' ?>
+                            <?= _l(isset($bucket['id']) ? 'cdn.buckets.form.project-locked' : 'cdn.buckets.form.project-more') ?>
                         </div>
                     <?php else : ?>
                         <select name="project" class="form-select" id="project-select">
@@ -49,7 +47,7 @@
                             <option value="{{ $option['id'] }}" data-slug="{{ $option['slug'] }}">{{ $option['name'] }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Which namespace this bucket lives under.</div>
+                        <div class="form-text">{{ _l('cdn.buckets.form.project-single') }}</div>
                     <?php endif ?>
                 </div>
 
@@ -60,11 +58,7 @@
                         <input name="slug" class="form-control mono" value="{{ $bucket['slug'] ?? '' }}" placeholder="{{ _l('cdn.buckets.form.url-holder') }}" required>
                     </div>
                     <div class="form-text">
-                        @if(isset($bucket['id']))
-                        Changing this breaks every URL already in use.
-                        @else
-                        Only has to be unused inside this project — other accounts can have one with the same name.
-                        @endif
+                        <?= _l(isset($bucket['id']) ? 'cdn.buckets.form.url-help-edit' : 'cdn.buckets.form.url-help-new') ?>
                     </div>
                 </div>
             </div>
@@ -107,7 +101,7 @@
                        {{ !isset($bucket['transform']) || $bucket['transform'] ? 'checked' : '' }}>
                 <label class="form-check-label" for="transform">
                     <strong>{{ _l('cdn.buckets.form.transform') }}</strong>
-                    <div class="hint">Lets <code>?w=400</code> and friends work. Turn off for buckets that hold no images.</div>
+                    <div class="hint">{{ _l('cdn.buckets.form.transform-help') }}</div>
                 </label>
             </div>
 
@@ -135,9 +129,9 @@
                     <h6>{{ _l('cdn.buckets.form.caching') }}</h6>
                     <div class="row g-3 mb-2">
                         <div class="col-md-6">
-                            <label class="form-label">Browsers may keep a copy for</label>
+                            <label class="form-label">{{ _l('cdn.buckets.form.keep-for') }}</label>
                             <select name="cache_ttl" class="form-select">
-                                <?php foreach ([300 => '5 minutes', 3600 => '1 hour', 86400 => '1 day', 604800 => '1 week', 2592000 => '30 days', 31536000 => '1 year'] as $seconds => $label) : ?>
+                                <?php foreach ((array) _l('cdn.buckets.form.keep-for-options') as $seconds => $label) : ?>
                                     <option value="{{ $seconds }}" {{ (int) ($bucket['cache_ttl'] ?? 31536000) === $seconds ? 'selected' : '' }}>{{ $label }}</option>
                                 <?php endforeach ?>
                             </select>
@@ -146,57 +140,52 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="immutable" value="1" id="immutable"
                                        {{ !empty($bucket['immutable']) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="immutable">Never re-check (immutable)</label>
+                                <label class="form-check-label" for="immutable">{{ _l('cdn.buckets.form.never-recheck') }}</label>
                             </div>
                         </div>
                     </div>
 
-                    <div class="alert alert-light border small">
-                        A long cache is faster and cheaper, but nothing you do here can reach a copy already sitting in
-                        somebody's browser. If you overwrite files in place, keep this short. If your filenames change
-                        when the content changes, make it a year.
-                    </div>
+                    <div class="alert alert-light border small">{{ _l('cdn.buckets.form.cache-note') }}</div>
 
                     <h6 class="mt-4">{{ _l('cdn.buckets.form.hotlink') }}</h6>
-                    <p class="hint">Stops other sites embedding your files and spending your bandwidth.</p>
+                    <p class="hint">{{ _l('cdn.buckets.form.hotlink-lede') }}</p>
 
                     <select name="referer_mode" class="form-select mb-2">
-                        <option value="off"   {{ ($referers['mode'] ?? 'off') == 'off' ? 'selected' : '' }}>Off — anyone may embed</option>
-                        <option value="allow" {{ ($referers['mode'] ?? '') == 'allow' ? 'selected' : '' }}>Only these sites may embed</option>
-                        <option value="deny"  {{ ($referers['mode'] ?? '') == 'deny' ? 'selected' : '' }}>These sites may not embed</option>
+                        <option value="off"   {{ ($referers['mode'] ?? 'off') == 'off' ? 'selected' : '' }}>{{ _l('cdn.buckets.form.hotlink-off') }}</option>
+                        <option value="allow" {{ ($referers['mode'] ?? '') == 'allow' ? 'selected' : '' }}>{{ _l('cdn.buckets.form.hotlink-allow') }}</option>
+                        <option value="deny"  {{ ($referers['mode'] ?? '') == 'deny' ? 'selected' : '' }}>{{ _l('cdn.buckets.form.hotlink-deny') }}</option>
                     </select>
 
-                    <input name="referer_list" class="form-control mono mb-2" placeholder="example.com, shop.example.com"
+                    <input name="referer_list" class="form-control mono mb-2" placeholder="{{ _l('cdn.buckets.form.hotlink-holder') }}"
                            value="{{ implode(', ', (array) ($referers['list'] ?? [])) }}">
 
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="referer_empty" value="1" id="referer_empty"
                                {{ ($referers['allow-empty'] ?? true) ? 'checked' : '' }}>
                         <label class="form-check-label small" for="referer_empty">
-                            Still allow requests that say where they came from — typing the URL directly, and most
-                            privacy settings, send nothing. Turning this off blocks real people.
+                            {{ _l('cdn.buckets.form.hotlink-empty') }}
                         </label>
                     </div>
 
                     <h6 class="mt-4">{{ _l('cdn.buckets.form.limits') }}</h6>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Largest file (bytes, 0 = default)</label>
+                            <label class="form-label">{{ _l('cdn.buckets.form.max-size') }}</label>
                             <input name="max_file_size" type="number" class="form-control" value="{{ $bucket['max_file_size'] ?? 0 }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Only these extensions</label>
-                            <input name="allowed_ext" class="form-control mono" placeholder="jpg, png, webp — empty for any"
+                            <label class="form-label">{{ _l('cdn.buckets.form.only-ext') }}</label>
+                            <input name="allowed_ext" class="form-control mono" placeholder="{{ _l('cdn.buckets.form.only-ext-holder') }}"
                                    value="{{ implode(', ', Support::json($bucket['allowed_ext'] ?? null)) }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Only these content types</label>
+                            <label class="form-label">{{ _l('cdn.buckets.form.only-mime') }}</label>
                             <input name="allowed_mimes" class="form-control mono" placeholder="image/*, application/pdf"
                                    value="{{ implode(', ', Support::json($bucket['allowed_mimes'] ?? null)) }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Browser access from (CORS)</label>
-                            <input name="cors" class="form-control mono" placeholder="* or app.example.com"
+                            <label class="form-label">{{ _l('cdn.buckets.form.cors') }}</label>
+                            <input name="cors" class="form-control mono" placeholder="{{ _l('cdn.buckets.form.cors-holder') }}"
                                    value="{{ implode(', ', Support::json($bucket['cors'] ?? null)) }}">
                         </div>
                     </div>
@@ -205,25 +194,21 @@
                         <input class="form-check-input" type="checkbox" name="signed_only" value="1" id="signed_only"
                                {{ !empty($bucket['signed_only']) ? 'checked' : '' }}>
                         <label class="form-check-label small" for="signed_only">
-                            Require a signature even though the bucket is public — useful to stop strangers generating
-                            thousands of image sizes.
+                            {{ _l('cdn.buckets.form.signed-only') }}
                         </label>
                     </div>
 
                     <h6 class="mt-4">{{ _l('cdn.buckets.form.origin') }}</h6>
-                    <p class="hint">
-                        With an address here, a file nobody uploaded is fetched from there the first time it is asked
-                        for, then served from here. Leave empty for a normal bucket.
-                    </p>
+                    <p class="hint">{{ _l('cdn.buckets.form.origin-lede') }}</p>
 
                     <div class="row g-3">
                         <div class="col-md-8">
-                            <label class="form-label">Origin URL</label>
+                            <label class="form-label">{{ _l('cdn.buckets.form.origin-url') }}</label>
                             <input name="origin_url" class="form-control mono" placeholder="https://origin.example.com/assets"
                                    value="{{ $bucket['origin_url'] ?? '' }}">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Re-check after (seconds)</label>
+                            <label class="form-label">{{ _l('cdn.buckets.form.origin-ttl') }}</label>
                             <input name="origin_ttl" type="number" class="form-control" value="{{ $bucket['origin_ttl'] ?? 86400 }}">
                         </div>
                     </div>

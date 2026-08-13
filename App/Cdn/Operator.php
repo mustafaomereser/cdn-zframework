@@ -82,12 +82,23 @@ class Operator
         foreach ($users as &$user) {
             $own = $byOwner[(int) $user['id']] ?? [];
 
-            $user['projects']  = $own;
-            $user['storage']   = array_sum(array_map(fn($p) => (int) $p['storage_used'], $own));
+            $user['projects'] = $own;
+
+            # Against the account's allowance, so a project with its own numbers
+            # is left out of it - it is measured against its own ceiling, and
+            # counting it twice is how an account with a 50 GB project watches
+            # its own 5 GB fill up with bytes nobody charged to it.
+            $shared = array_values(array_filter($own, fn($p) => ($p['quota_mode'] ?? 'account') !== 'custom'));
+
+            $user['storage']   = array_sum(array_map(fn($p) => (int) $p['storage_used'], $shared));
             $user['bandwidth'] = array_sum(array_map(
                 fn($p) => ($p['bandwidth_period'] ?? null) === date('Y-m') ? (int) $p['bandwidth_used'] : 0,
-                $own
+                $shared
             ));
+
+            # What the account holds in total is a different number, and an
+            # operator looking at a list of accounts wants both.
+            $user['storage-total'] = array_sum(array_map(fn($p) => (int) $p['storage_used'], $own));
 
             # The allowance is the account's own, not a sum over its projects.
             # Accounts that predate the column read it from their oldest project

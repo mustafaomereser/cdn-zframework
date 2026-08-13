@@ -15,12 +15,15 @@ use zFramework\Core\Facades\Auth;
 $sections = [
     'start'     => ['en' => 'Quick start',      'tr' => 'Hızlı başlangıç'],
     'urls'      => ['en' => 'URLs',             'tr' => 'Adresler'],
+    'projects'  => ['en' => 'Projects',         'tr' => 'Projeler'],
     'images'    => ['en' => 'Image sizes',      'tr' => 'Görsel boyutları'],
+    'minify'    => ['en' => 'CSS and JS',       'tr' => 'CSS ve JS'],
     'buckets'   => ['en' => 'Buckets',          'tr' => "Bucket'lar"],
     'signed'    => ['en' => 'Signed URLs',      'tr' => 'İmzalı adresler'],
     'api'       => ['en' => 'API',              'tr' => 'API'],
     'upload'    => ['en' => 'Uploading',        'tr' => 'Yükleme'],
     'purge'     => ['en' => 'Clearing cache',   'tr' => 'Önbellek temizleme'],
+    'quotas'    => ['en' => 'Quotas and limits', 'tr' => 'Kotalar ve sınırlar'],
     'errors'    => ['en' => 'Errors',           'tr' => 'Hatalar'],
     'cli'       => ['en' => 'Command line',     'tr' => 'Komut satırı'],
 ];

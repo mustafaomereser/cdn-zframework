@@ -61,7 +61,15 @@ $share = $usage['quota'] > 0 ? min(100, round($usage['used'] / $usage['quota'] *
             </div>
         <?php endif ?>
 
-        <div class="hint small mt-2">{{ _l('cdn.projects.quota-note') }}</div>
+        <div class="hint small mt-2">
+            {{ _l('cdn.projects.quota-note') }}
+            <?php # A project with its own quota is measured against that and is
+                  # not part of this bar - said here, where the difference would
+                  # otherwise look like the numbers not adding up. ?>
+            <?php if (count(array_filter($rows, fn($row) => $row['own-quota']))) : ?>
+                {{ _l('cdn.projects.own-quota-note') }}
+            <?php endif ?>
+        </div>
     </div>
 </div>
 

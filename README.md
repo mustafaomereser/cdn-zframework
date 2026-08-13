@@ -1,6 +1,6 @@
 # cdn-zframework
 
-A content delivery service built on [zFramework](docs/zframework.md) v3.
+A content delivery service built on zFramework v3.
 
 Sign up, upload a file, get a URL. Ask for a different size or format by
 changing the query string. Everything the panel does, an API key can do.
@@ -21,7 +21,7 @@ and run it for other people.
 2. [Installing it](#2-installing-it)
 3. [Concepts](#3-concepts)
 4. [URLs](#4-urls)
-5. [Image transforms](#5-image-transforms)
+5. [Image transforms](#5-image-transforms) · [Minifying css and js](#51-minifying-css-and-js)
 6. [The API](#6-the-api)
 7. [Signed URLs](#7-signed-urls)
 8. [The panel, page by page](#8-the-panel-page-by-page)
@@ -92,8 +92,16 @@ people reading the repository rather than the service.
 
 **Project** — a namespace, and the first segment of every URL it serves. An
 account can own several: separating a staging site from a live one, or one
-client from another. Buckets, files, keys and quota all belong to a project, and
-nothing is visible between accounts.
+client from another. Buckets, files and keys all belong to a project.
+
+Its URL name always starts with the account's own: the first project *is* that
+name, the rest are `<account>-<project>`. So a URL says whose it is, and nobody
+takes a name somebody else wanted. It is fixed at creation — it is in every
+address the project has ever served — while the display name can change freely.
+The first project cannot be deleted or renamed at all; every other project's
+name is derived from it.
+
+The quota is **not** per project. See [Quotas](#quotas).
 
 **Bucket** — a folder with rules. Its name is the segment after the project, so
 it only has to be unique *within* a project: every account gets to have one
@@ -139,6 +147,14 @@ Responses carry `X-Cdn-Cache: HIT|MISS`, `X-Cdn-Bucket`, and `X-Cdn-Variant`
 when a generated image was served.
 
 **Force a download** instead of displaying: add `?download=1`.
+
+**Minified css and js**: add `?min=1`, or turn it on for a whole bucket. See
+[section 5.1](#51-minifying-css-and-js).
+
+**Text payloads carry their charset.** A javascript file served without one is
+decoded with a guess, and every non-ascii character in it arrives as mojibake
+while the file on disk stays byte-for-byte correct. `delivery.charset` sets it;
+empty sends the bare type.
 
 **Cache headers** come from the bucket. Be deliberate with `immutable`: it tells
 browsers never to re-check, which is right when the filename changes with the
@@ -196,6 +212,40 @@ invalidates every generated image at once.
 and a source image above `transform.max-pixels` is refused before it is decoded.
 If a transform cannot be produced at all, **the original is served** — a
 slightly larger image beats a broken one.
+
+### 5.1 Minifying css and js
+
+```
+?min=1      the minified copy
+?min=0      the original, whatever the bucket says
+```
+
+A minified stylesheet is a variant of a file the way a 400px thumbnail is: same
+table, same storage, same purge, same eviction. **The stored object is never
+touched** — it is what the hash addresses, what the ETag comes from, and what
+gets served when a minifier mangles a file, which is a thing minifiers do.
+
+A build that returns nothing, throws, or comes out larger falls back silently to
+the original. Anything already named `*.min.js` is skipped.
+
+Turn it on per bucket (`Minify css and js` in the bucket form) so the plain URL
+serves the smaller copy, or installation-wide with `minify.auto`:
+
+```php
+'minify' => [
+    'enabled'      => true,
+    'auto'         => false,          // per-bucket `minify` overrides this
+    'types'        => ['js', 'mjs', 'css'],
+    'max-size'     => 4 * 1024 * 1024,
+    'log-failures' => false,
+],
+```
+
+The work is done by the framework's own minifiers — JShrink for js, its regex
+pass for css — with one scan in front of the css one, because that pass leaves
+both comments and runs of whitespace behind. The scan is not a regex: `content:
+"/*"` is legal css and so is a font name with two spaces in it, and a regex that
+removes either from inside a string is a stylesheet that no longer parses.
 
 ---
 
@@ -438,9 +488,16 @@ php cdn sign bucket=invoices path=2026-08.pdf ttl=3600 host=https://cdn.example.
 
 ## 8. The panel, page by page
 
-**Overview** — the page you live on. Drag files in, pick the bucket, upload.
-Today's traffic, the last 30 days, how much is served from cache, how much you
-have stored. Recent files, your buckets, a traffic sparkline.
+**Overview** — the page you live on, in four bands: upload, the four numbers
+that say what it costs and how it is going, a month of traffic, and what is in
+there. The upload shows a progress bar while the bytes go up, switches to
+"checking and hashing" while the server finishes, and lists what came back with
+a copy button for each URL.
+
+**Projects** — one card each: where its URLs start, its buckets by name, what it
+is using, and what can be done to it. Opening one gives its buckets, its usage,
+rename and delete. The switcher in the sidebar scopes the whole panel to one
+project — files, buckets, keys, activity and the usage figures all follow it.
 
 **Files** — everything you have, searchable, filterable by bucket. Click one
 for its URL, a live size builder (change width, format, quality and watch the
@@ -457,8 +514,7 @@ appears once, at creation.
 **Activity** — two tabs. *Requests*: what was served, what was refused and why,
 how long each took. *Cache clears*: what you have purged, and what it removed.
 
-**Settings** — your project name and quota use, the API address, a copy-paste
-curl example.
+**Settings** — your account, your allowance, and the API address.
 
 **Administration** — operators only, and a separate area rather than extra rows
 on the pages above: Accounts, Projects (the quota form), Installation, Log, and
@@ -491,11 +547,15 @@ in the sidebar — with four pages, and a fifth when the console is on:
 
 | page | what it is for |
 |---|---|
-| Accounts | everybody with an account, what they store and transfer, suspend / restore / promote / delete |
-| Projects | the quota form: storage and monthly transfer per project, reset this month's counter, suspend a project |
+| Accounts | everybody with an account and what they use. Each one opens: its projects with bucket and file counts, its recent files, its allowance, suspend with a reason, promote, delete |
+| Projects | every project, whoever owns it. Each one opens: its buckets, its recent files, the per-project quota override, suspend, reset this month |
+| Files | every file in the installation, searchable, each row saying which bucket and which project |
 | Installation | what this machine can actually do (image engine, formats, cache, finfo), disks and free space |
 | Log | who changed what, with the numbers before and after |
 | Console | run `php cdn` and `php terminal` commands — off by default, see below |
+
+The lists are lists: everything that changes something is on the thing's own
+page. A row that carries four forms is a row nobody can read.
 
 Three ways to be an operator, in this order:
 
@@ -522,10 +582,19 @@ scoping is structural rather than a permission, and the operator pages are a
 separate route group behind their own middleware rather than an `if` inside the
 normal ones.
 
-**Suspending** an account signs it out of the panel and stops its projects
-serving — `403` at the delivery path — without touching a byte. **Deleting**
-one removes its files properly: each file releases its object's reference so the
-collector can reclaim the bytes, which is what dropping rows would not do.
+**Suspending** stops a project serving — `403` at the delivery path — *and*
+stops anything being written to it: no uploads, no deletions, through the panel
+or the API alike. Otherwise "suspended" means the URLs are off while the account
+goes on filling the disk, and can delete whatever it was suspended over. Reads
+are untouched: the panel still lists everything, and nothing is destroyed.
+
+Suspending asks **why**, and the reason is shown to the owner — on the project's
+page, or at sign-in when it is the whole account. "Suspended" with no reason is
+a support ticket whose answer the operator already had and did not write down.
+
+**Deleting** an account removes its files properly: each file releases its
+object's reference so the collector can reclaim the bytes, which is what
+dropping rows would not do.
 
 Every change here writes a row to `cdn_audits`: who, what, the subject, the
 before and after, and the address it came from. Nothing on the delivery path
@@ -556,11 +625,24 @@ New projects start from:
 ],
 ```
 
-Changing an existing one is the **Projects** page under Administration: a number
-and a unit rather than a byte count, because nobody types 214748364800 and
-everybody who has had to has typed it wrong once. Saving invalidates the
-registry cache, so a raised quota is felt by the person who was refused rather
-than up to `cache.registry-ttl` later.
+Changing one is the **Accounts** page under Administration: a number and a unit
+rather than a byte count, because nobody types 214748364800 and everybody who
+has had to has typed it wrong once. It is written to the account and down to its
+projects — the delivery path has a project row in hand and nothing else, and a
+join to the owner on the hottest query in the application to find a number that
+changes twice a year is not a trade worth making.
+
+**One project can have numbers of its own.** Tick *A quota just for this
+project* on its operator page and it stops following the account: an
+account-level edit leaves it alone, and the project's own page shows its figure
+labelled "this project only". Without that flag there is no way to tell a
+project that was given 50 GB on purpose from one that happens to match its
+owner, and the next edit takes it away silently.
+
+The transfer quota is enforced as it runs out, not when somebody next looks: the
+counter drops the project's cached row at the moment its own write crosses the
+line, so the request that crosses is served — it was already in flight — and the
+next one is refused.
 
 ### The console
 
@@ -659,6 +741,14 @@ that serves them, per installation. English and Turkish are written by hand and
 committed; everything else is `.gitignore`d, so a language somebody built by
 opening the menu is not something you have to review a pull request for.
 
+**A language that falls behind catches up by itself.** A generated file is a
+snapshot of the English one from the day it was built, so adding a page to the
+panel leaves every one of them a few strings short — and a missing key renders
+as nothing at all, which shows up as a tab with an icon and no label rather than
+as an error anybody reports. Selecting a language checks it is complete, and
+being on one compares two mtimes on each GET; either way the builder fills in
+what is missing and hands the visitor back to the page they were on.
+
 It is a **first draft**. Correct a line and it stays — running the command again
 only fills in values that are empty, unless you pass `--force`. `{placeholders}`
 and markup are masked out before the call and put back after, and the words in
@@ -709,6 +799,7 @@ return [
     'limits'    => [...],   // rate limiting
     'security'  => [...],   // hotlinking, address rules, headers
     'logging'   => [...],   // the request log and the counters
+    'minify'    => [...],   // minified css and js
     'cache'     => [...],   // lookup caching
     'auth'      => [...],   // registration, operators, new-project defaults
     'i18n'      => [...],   // languages
@@ -810,6 +901,11 @@ an unused derivative survives.
 on a misconfigured server: the point is that an upload directory is never also
 an execution directory, and this is the second lock.
 
+### minify
+
+Minified css and js, as a derivative — see
+[section 5.1](#51-minifying-css-and-js).
+
 ### limits, security, logging
 
 `limits` is per-address, per-key and per-upload rate limiting. `security` holds
@@ -821,12 +917,17 @@ and storage quota have to be exact.
 ### cache
 
 ```php
-'cache' => ['registry-ttl' => 300],
+'cache' => ['registry-ttl' => 120],
 ```
 
 Seconds a bucket or project row may be served from `GlobalCache`. Every write
-path invalidates its own key, so this is only the window for a change made
-*outside* the application — a row edited straight in the database.
+path invalidates its own key — including the transfer counter, which drops the
+project the moment a request takes it over its quota — so this is the window for
+a change made *outside* the application: a row edited straight in the database,
+or another machine's copy of it when the cache is per-host rather than in Redis.
+
+Do not take it to zero. The delivery path reads these rows on every single
+asset, and that is the one query per request this cache exists to avoid.
 
 ### auth
 
@@ -915,5 +1016,6 @@ temp is scratch; the object store is not.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The framework underneath is documented in
-[docs/zframework.md](docs/zframework.md).
+MIT. See [LICENSE](LICENSE). The framework underneath is zFramework v3, whose
+own README documents it - nothing in `zFramework/` is modified by this project,
+so a new release can be copied over the top of it.
