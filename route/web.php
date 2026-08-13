@@ -27,4 +27,8 @@ Route::middleware([App\Middlewares\Guest::class])->group(function () {
 Route::middleware([App\Middlewares\Auth::class])->group(fn() => Route::any('/sign-out', [AuthController::class, 'signout'])->name('sign-out'));
 
 Route::get('/auth-content', [AuthController::class, 'content'])->name('auth-content');
-Route::resource('/', HomeController::class);
+
+# A single page, not a resource. The skeleton's resource registered six other
+# routes on `/`, one of which POSTed straight into the terminal - a remote shell
+# on a host whose whole job is to be publicly reachable.
+Route::get('/', [HomeController::class, 'index'])->name('home');

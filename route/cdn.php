@@ -99,8 +99,11 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin'), '/cdn-admin')
         Route::post('/keys', [AdminController::class, 'keyCreate'])->name('keys.create');
         Route::post('/keys/{id}/revoke', [AdminController::class, 'keyRevoke'])->name('keys.revoke');
 
-        Route::get('/logs', [AdminController::class, 'logs'])->name('logs');
-        Route::get('/purges', [AdminController::class, 'purges'])->name('purges');
+        # One page: what was served, and what was cleared. They answer the same
+        # question and used to be two.
+        Route::get('/activity', [AdminController::class, 'activity'])->name('activity');
+
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+        Route::post('/settings', [AdminController::class, 'settingsSave'])->name('settings.save');
     });
 #endregion

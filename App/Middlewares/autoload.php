@@ -23,6 +23,10 @@ if (PHP_SAPI === 'cli') {
     \App\Cdn\Credentials::flushRequestState();
     \App\Cdn\Registry::flushRequestState();
     \App\Cdn\Delivery::flushRequestState();
+
+    # The resolved project, above all: leaving it would show one account the
+    # next one's files.
+    \App\Cdn\Tenant::flushRequestState();
 }
 
 /**

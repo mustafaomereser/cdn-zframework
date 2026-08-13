@@ -323,15 +323,42 @@ return [
     ],
 
     /**
-     * Administration.
+     * Accounts.
+     *
+     * Every user gets one project of their own: their buckets, their files,
+     * their keys, their quota. Nothing is shared and nothing is visible across
+     * accounts.
+     *
+     * registration  Whether strangers may sign up. Turn it off to run this as
+     *               a private CDN - the sign-in form stays, the sign-up form
+     *               disappears and POSTs to it are refused.
+     *
+     * operators     E-mail addresses that administer the installation itself:
+     *               system health, every project's usage. Empty means the first
+     *               registered account - somebody has to be, and on a fresh
+     *               install there is nobody to grant it.
+     *
+     * defaults      Applied to a project when it is created. Quotas of 0 are
+     *               unlimited; `bucket` is the first bucket made for a new
+     *               account so the panel has something in it. Empty to skip.
+     */
+    'auth' => [
+        'registration' => true,
+        'operators'    => [],
+
+        'defaults' => [
+            'storage-quota'   => 5 * 1024 * 1024 * 1024,
+            'bandwidth-quota' => 50 * 1024 * 1024 * 1024,
+            'bucket'          => 'assets',
+        ],
+    ],
+
+    /**
+     * The panel.
      */
     'admin' => [
         'enabled' => true,
-        'route'   => '/cdn-admin',
-
-        # Users allowed in. Empty means any authenticated user, which is only
-        # reasonable while the application has no other users.
-        'emails'  => [],
+        'route'   => '/panel',
     ],
 
     /**

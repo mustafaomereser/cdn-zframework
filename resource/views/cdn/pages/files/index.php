@@ -1,42 +1,14 @@
 @extends('cdn.main')
 @section('title', 'Files')
+@section('lede', 'Everything you have stored. Click one for its URL and the sizes you can ask for.')
+
+@section('actions')
+<a href="{{ route('cdn-admin.dashboard') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-cloud-arrow-up"></i> Upload
+</a>
+@endsection
 
 @section('body')
-<div class="card mb-3">
-    <div class="card-body">
-        <form action="{{ route('cdn-admin.files.upload') }}" method="POST" enctype="multipart/form-data" class="row g-2 align-items-end">
-            <?= csrf()  ?>
-
-            <div class="col-md-3">
-                <label class="form-label small mb-1">Bucket</label>
-                <select name="bucket" class="form-select form-select-sm" required>
-                    @foreach($buckets as $bucket)
-                    <option value="{{ $bucket['id'] }}">{{ $bucket['name'] }} (/{{ $bucket['slug'] }})</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label small mb-1">Files</label>
-                <input type="file" name="files[]" class="form-control form-control-sm" multiple>
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label small mb-1">…or a URL to fetch</label>
-                <input name="url" class="form-control form-control-sm mono" placeholder="https://…">
-            </div>
-
-            <div class="col-md-2">
-                <label class="form-label small mb-1">Path prefix</label>
-                <input name="path" class="form-control form-control-sm mono" placeholder="images/2026">
-            </div>
-
-            <div class="col-md-1">
-                <button class="btn btn-primary btn-sm w-100">Upload</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <form method="GET" class="row g-2 mb-3">
     <div class="col-md-3">
@@ -48,10 +20,10 @@
         </select>
     </div>
     <div class="col-md-4">
-        <input name="q" class="form-control form-control-sm" placeholder="Search path…" value="{{ request('q') ?: '' }}">
+        <input name="q" class="form-control form-control-sm" placeholder="Search by path…" value="{{ request('q') ?: '' }}">
     </div>
-    <div class="col-md-1">
-        <button class="btn btn-outline-secondary btn-sm w-100">Filter</button>
+    <div class="col-md-2">
+        <button class="btn btn-outline-secondary btn-sm w-100">Search</button>
     </div>
 </form>
 
@@ -64,8 +36,7 @@
                     <th>Type</th>
                     <th class="text-end">Size</th>
                     <th class="text-end">Requests</th>
-                    <th class="text-end">Served</th>
-                    <th>Uploaded</th>
+                    <th>Added</th>
                     <th></th>
                 </tr>
             </thead>
@@ -83,23 +54,26 @@
                     </td>
                     <td class="text-end">{{ File::humanFileSize($file['size']) }}</td>
                     <td class="text-end">{{ number_format((int) $file['downloads']) }}</td>
-                    <td class="text-end">{{ File::humanFileSize($file['bytes_served']) }}</td>
                     <td class="small text-secondary">{{ $file['created_at'] }}</td>
                     <td class="text-end">
                         <form action="{{ route('cdn-admin.files.delete', ['id' => $file['id']]) }}" method="POST"
-                              data-confirm="Delete {{ $file['path'] }}?">
-                            <?= csrf()  ?>
+                              data-confirm="Delete {{ $file['path'] }}? Any page using its URL will break.">
+                            <?= csrf() ?>
                             <button class="btn btn-sm btn-outline-danger">Delete</button>
                         </form>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" class="text-center text-secondary py-4 small">No files.</td></tr>
+                <tr>
+                    <td colspan="6" class="text-center text-secondary py-4 small">
+                        Nothing here. <a href="{{ route('cdn-admin.dashboard') }}">Upload something</a>.
+                    </td>
+                </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="mt-3"><?= $files['links']()  ?></div>
+<div class="mt-3"><?= $files['links']() ?></div>
 @endsection

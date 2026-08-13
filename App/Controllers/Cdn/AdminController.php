@@ -9,95 +9,176 @@ use App\Cdn\Secret;
 use App\Cdn\Signature;
 use App\Cdn\Storage;
 use App\Cdn\Support;
+use App\Cdn\Tenant;
 use App\Cdn\Transform;
 use App\Cdn\Uploader;
 use App\Models\Cdn\AccessLogs;
 use App\Models\Cdn\ApiKeys;
 use App\Models\Cdn\Buckets;
 use App\Models\Cdn\Files;
-use App\Models\Cdn\Projects;
 use App\Models\Cdn\Purges;
+use App\Models\Cdn\Variants;
 use zFramework\Core\Facades\Alerts;
 use zFramework\Core\Facades\Auth;
 use zFramework\Core\Facades\DB;
+use zFramework\Core\Facades\Session;
 use zFramework\Core\Validator;
 
 /**
- * The operator panel.
+ * The panel.
  *
- * Everything the API can do, with a face on it, plus the things only a person
- * needs: what is filling the disk, which paths are being refused and why, what
- * a purge actually removed.
+ * Everything here is scoped to the signed-in user's project through Tenant,
+ * which resolves ids rather than trusting them. A method that reads an id
+ * straight out of the URL and hands it to findOrFail is a method that serves
+ * somebody else's files, and there is no amount of menu-hiding that fixes it.
+ *
+ * Five pages, deliberately: Overview, Files, Buckets, Keys, Activity. The
+ * things a person does daily - upload something, copy its URL - are on the
+ * first one, so the rest can be as detailed as they need to be.
  */
 class AdminController
 {
     /**
-     * The project this panel administers.
+     * Overview: what is here, what it costs, and the two actions that make up
+     * most of the day.
      *
-     * Single-tenant by default - the first project, created on demand - because
-     * an installation that never needs a second one should not have to think
-     * about the concept at all.
-     *
-     * @return array
-     */
-    private function project(): array
-    {
-        $model   = new Projects;
-        $project = $model->closureMode(false)->orderBy(['id' => 'ASC'])->first();
-
-        if ($project) return $project;
-
-        return $model->insert([
-            'name' => (string) (config('app.title') ?: 'CDN'),
-            'slug' => 'default',
-            'owner_id' => Auth::id(),
-        ]);
-    }
-
-    /**
      * @return mixed
      */
     public function dashboard(): mixed
     {
-        $project = $this->project();
-        $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get();
+        $project = Tenant::project();
+        $buckets = Tenant::buckets();
 
-        $series = Metrics::series(null, 30);
-
-        $totals = ['requests' => 0, 'bytes' => 0, 'hits' => 0, 'misses' => 0, 'errors' => 0];
-        foreach ($series as $day) foreach ($totals as $key => $value) $totals[$key] += (int) $day[$key];
-
-        # Today is not in cdn_stats yet - the rollup runs overnight - so it is
-        # read from the log directly. Without this the dashboard looks dead
-        # every morning until the cron fires.
-        $today = (new DB)->prepare(
-            "SELECT COUNT(*) AS requests, COALESCE(SUM(bytes * weight), 0) AS bytes,
-                    SUM(IF(cache = 'hit', 1, 0)) AS hits, SUM(IF(status >= 400, 1, 0)) AS errors
-               FROM cdn_access_logs WHERE created_at >= :from",
-            ['from' => date('Y-m-d') . ' 00:00:00']
-        )->fetch(\PDO::FETCH_ASSOC) ?: [];
-
-        $variants = (new DB)->prepare("SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM cdn_variants")->fetch(\PDO::FETCH_ASSOC) ?: [];
-
-        $popular = (new Files)
+        $files = (new Files)
             ->where('project_id', $project['id'])
-            ->orderBy(['downloads' => 'DESC'])
-            ->limit(10)
+            ->orderBy(['id' => 'DESC'])
+            ->limit(8)
             ->closureMode(false)
             ->get();
 
-        return view('cdn.pages.dashboard', compact('project', 'buckets', 'series', 'totals', 'today', 'variants', 'popular'));
+        # Today comes from the log rather than the rollup, which runs overnight.
+        # Without this the dashboard looks dead every morning.
+        $today = (new DB)->prepare(
+            "SELECT COUNT(*) AS requests, COALESCE(SUM(bytes * weight), 0) AS bytes,
+                    SUM(IF(cache = 'hit', 1, 0)) AS hits, SUM(IF(status >= 400, 1, 0)) AS errors
+               FROM cdn_access_logs WHERE project_id = :project AND created_at >= :from",
+            ['project' => $project['id'], 'from' => date('Y-m-d') . ' 00:00:00']
+        )->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+        $series = Metrics::series(null, 30, (int) $project['id']);
+
+        $totals = ['requests' => 0, 'bytes' => 0, 'hits' => 0, 'misses' => 0];
+        foreach ($series as $day) foreach ($totals as $key => $value) $totals[$key] += (int) $day[$key];
+
+        return view('cdn.pages.dashboard', compact('project', 'buckets', 'files', 'today', 'series', 'totals'));
     }
 
+    #region Files
+    /**
+     * @return mixed
+     */
+    public function files(): mixed
+    {
+        $project = Tenant::project();
+        $buckets = Tenant::buckets();
+
+        $query = (new Files)->where('project_id', $project['id'])->closureMode(false);
+
+        # The bucket filter is checked against this user's buckets, not taken as
+        # given - otherwise it is a way to read another project's file list.
+        if ($bucket = request('bucket')) $query->where('bucket_id', (int) Tenant::bucket((int) $bucket)['id']);
+        if ($search = request('q'))      $query->where('path', 'LIKE', '%' . $search . '%');
+
+        $files = $query->orderBy(['id' => 'DESC'])->paginate(30);
+
+        return view('cdn.pages.files.index', compact('files', 'buckets', 'project'));
+    }
+
+    /**
+     * @param string $id
+     * @return mixed
+     */
+    public function file(string $id): mixed
+    {
+        $file     = Tenant::file($id);
+        $bucket   = Tenant::bucket((int) $file['bucket_id']);
+        $variants = (new Variants)->where('file_id', $file['id'])->closureMode(false)->orderBy(['hits' => 'DESC'])->get();
+
+        return view('cdn.pages.files.show', [
+            'file'     => $file,
+            'bucket'   => $bucket,
+            'variants' => $variants,
+            'url'      => $this->url($bucket, $file['path']),
+        ]);
+    }
+
+    /**
+     * Upload: files from the browser, or a URL for the server to fetch.
+     *
+     * @return mixed
+     */
+    public function upload(): mixed
+    {
+        $bucket = Tenant::bucket((string) request('bucket'));
+        $prefix = trim((string) request('path'), '/');
+
+        $results = [];
+
+        if (!empty($_FILES['files']['name'][0])) {
+            foreach (array_keys($_FILES['files']['name']) as $index) {
+                $entry = array_combine(array_keys($_FILES['files']), array_column($_FILES['files'], $index));
+
+                $results[] = Uploader::fromRequest($bucket, $entry, [
+                    'path'        => $prefix ? $prefix . '/' . Support::slugName($entry['name']) : null,
+                    'uploaded_by' => 'panel:' . Auth::id(),
+                ]);
+            }
+        } elseif (request('url')) {
+            $results[] = Uploader::fromUrl($bucket, (string) request('url'), [
+                'path'        => $prefix ? $prefix . '/' . Support::slugName(basename((string) parse_url(request('url'), PHP_URL_PATH))) : null,
+                'uploaded_by' => 'panel:' . Auth::id(),
+            ]);
+        } else {
+            Alerts::danger('Choose a file, or give a URL to fetch.');
+            return back();
+        }
+
+        Registry::forgetBucket($bucket['slug']);
+
+        $done = array_values(array_filter($results, fn($result) => $result['ok']));
+
+        if (count($done)) Alerts::success(count($done) . ' file(s) uploaded.');
+        foreach ($results as $result) if (!$result['ok']) Alerts::danger($this->reason($result));
+
+        # Straight to the file when it is the only one: the next thing wanted is
+        # always its URL.
+        if (count($done) === 1 && count($results) === 1) return redirect(route('cdn-admin.files.show', ['id' => $done[0]['file']['id']]));
+
+        return back();
+    }
+
+    /**
+     * @param string $id
+     * @return mixed
+     */
+    public function fileDelete(string $id): mixed
+    {
+        $file = Tenant::file($id);
+        Uploader::delete($file);
+
+        Alerts::success('Deleted ' . $file['path'] . '.');
+
+        return redirect(route('cdn-admin.files'));
+    }
+    #endregion
+
+    #region Buckets
     /**
      * @return mixed
      */
     public function buckets(): mixed
     {
-        $project = $this->project();
-        $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'DESC'])->get();
-
-        return view('cdn.pages.buckets.index', compact('project', 'buckets'));
+        return view('cdn.pages.buckets.index', ['buckets' => Tenant::buckets(), 'project' => Tenant::project()]);
     }
 
     /**
@@ -106,9 +187,7 @@ class AdminController
      */
     public function bucketForm(?string $id = null): mixed
     {
-        $bucket = $id ? (new Buckets)->closureMode(false)->findOrFail($id) : [];
-
-        return view('cdn.pages.buckets.form', compact('bucket'));
+        return view('cdn.pages.buckets.form', ['bucket' => $id ? Tenant::bucket($id) : []]);
     }
 
     /**
@@ -116,7 +195,7 @@ class AdminController
      */
     public function bucketSave(): mixed
     {
-        $project = $this->project();
+        $project = Tenant::project();
         $model   = new Buckets;
         $id      = request('id');
 
@@ -125,13 +204,15 @@ class AdminController
             'slug' => ['required', 'max:120'],
         ]);
 
-        $slug = \zFramework\Core\Facades\Str::slug((string) request('slug'));
+        $slug     = \zFramework\Core\Facades\Str::slug((string) request('slug'));
+        $existing = $id ? Tenant::bucket($id) : null;
 
-        # The slug is the first path segment of every URL in the bucket, so a
-        # collision would silently reroute somebody else's traffic.
+        # Globally unique, across every project: the slug is the first path
+        # segment of every public url, so a collision reroutes somebody else's
+        # traffic. Checked without a project filter for exactly that reason.
         $clash = $model->where('slug', $slug)->closureMode(false)->first();
-        if ($clash && (!$id || (int) $clash['id'] !== (int) $id)) {
-            Alerts::danger("`$slug` is already taken.");
+        if ($clash && (!$existing || (int) $clash['id'] !== (int) $existing['id'])) {
+            Alerts::danger("`$slug` is already taken - try another.");
             return back();
         }
 
@@ -140,35 +221,32 @@ class AdminController
             'slug'          => $slug,
             'visibility'    => in_array(request('visibility'), ['public', 'signed', 'private'], true) ? request('visibility') : 'public',
             'cache_ttl'     => max(0, (int) request('cache_ttl')),
-            'immutable'     => request('immutable') ? 1 : 0,
             'transform'     => request('transform') ? 1 : 0,
+            'immutable'     => request('immutable') ? 1 : 0,
             'signed_only'   => request('signed_only') ? 1 : 0,
             'max_file_size' => max(0, (int) request('max_file_size')),
             'origin_url'    => request('origin_url') ?: null,
             'origin_ttl'    => max(0, (int) request('origin_ttl')) ?: 86400,
-            'disk'          => request('disk') ?: 'local',
-            'status'        => request('status') ?: 'active',
             'allowed_ext'   => $this->list(request('allowed_ext')),
             'allowed_mimes' => $this->list(request('allowed_mimes')),
             'cors'          => $this->list(request('cors')),
             'referers'      => json_encode([
                 'mode'        => in_array(request('referer_mode'), ['off', 'allow', 'deny'], true) ? request('referer_mode') : 'off',
                 'list'        => array_values(array_filter(array_map('trim', explode(',', (string) request('referer_list'))))),
-                'allow-empty' => request('referer_empty') ? true : false,
+                'allow-empty' => (bool) request('referer_empty'),
             ]),
         ];
 
-        if ($id) {
-            $existing = $model->closureMode(false)->findOrFail($id);
-            $model->where('id', $id)->update($columns);
+        if ($existing) {
+            $model->where('id', $existing['id'])->update($columns);
             Registry::forgetBucket($existing['slug']);
             Registry::forgetBucket($slug);
-            Alerts::success('Bucket updated.');
+            Alerts::success('Bucket saved.');
         } else {
             $model->insert($columns + [
-                'project_id' => $project['id'],
-                # Generated per bucket so one bucket's links can be invalidated
-                # on their own, later, without touching the others.
+                'project_id'  => $project['id'],
+                # Per bucket, so one bucket's signed links can be invalidated
+                # later without touching the others.
                 'signing_key' => Support::token(24),
             ]);
             Alerts::success('Bucket created.');
@@ -183,10 +261,10 @@ class AdminController
      */
     public function bucketDelete(string $id): mixed
     {
-        $bucket = (new Buckets)->closureMode(false)->findOrFail($id);
+        $bucket = Tenant::bucket($id);
 
-        # Files first, so their bytes lose their references and the collector
-        # can reclaim them. Deleting the bucket row alone would leave the
+        # The files go first, so their bytes lose their references and the
+        # collector can reclaim them. Dropping the bucket alone would leave the
         # objects referenced forever by rows nothing can reach.
         $files = (new Files)->where('bucket_id', $bucket['id'])->closureMode(false)->get();
         foreach ($files as $file) Uploader::delete($file);
@@ -195,7 +273,7 @@ class AdminController
         (new Buckets)->where('id', $bucket['id'])->delete();
         Registry::forgetBucket($bucket['slug']);
 
-        Alerts::success('Bucket deleted with ' . count($files) . ' file(s).');
+        Alerts::success('Bucket deleted, with ' . count($files) . ' file(s).');
 
         return redirect(route('cdn-admin.buckets'));
     }
@@ -206,113 +284,35 @@ class AdminController
      */
     public function bucketPurge(string $id): mixed
     {
-        $bucket = (new Buckets)->closureMode(false)->findOrFail($id);
-        $result = Purger::bucket($bucket, 'panel:' . Auth::id());
+        $result = Purger::bucket(Tenant::bucket($id), 'panel:' . Auth::id());
 
-        Alerts::success("Purged {$result['variants']} derivative(s), freed " . \zFramework\Core\Helpers\File::humanFileSize($result['bytes']) . '.');
-
-        return back();
-    }
-
-    /**
-     * @return mixed
-     */
-    public function files(): mixed
-    {
-        $project = $this->project();
-        $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->get();
-
-        $query = (new Files)->where('project_id', $project['id'])->closureMode(false);
-
-        if ($bucket = request('bucket')) $query->where('bucket_id', (int) $bucket);
-        if ($search = request('q'))      $query->where('path', 'LIKE', '%' . $search . '%');
-
-        $files = $query->orderBy(['id' => 'DESC'])->paginate(30);
-
-        return view('cdn.pages.files.index', compact('files', 'buckets', 'project'));
-    }
-
-    /**
-     * @param string $id
-     * @return mixed
-     */
-    public function file(string $id): mixed
-    {
-        $file     = (new Files)->closureMode(false)->findOrFail($id);
-        $bucket   = (new Buckets)->closureMode(false)->findOrFail((string) $file['bucket_id']);
-        $variants = (new \App\Models\Cdn\Variants)->where('file_id', $file['id'])->closureMode(false)->orderBy(['hits' => 'DESC'])->get();
-
-        $url = ($bucket['visibility'] === 'public')
-            ? host() . rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/') . '/' . $bucket['slug'] . '/' . $file['path']
-            : Signature::url($bucket['slug'], $file['path'], ['bucket' => $bucket, 'ttl' => 3600]);
-
-        return view('cdn.pages.files.show', compact('file', 'bucket', 'variants', 'url'));
-    }
-
-    /**
-     * @return mixed
-     */
-    public function upload(): mixed
-    {
-        $bucket = (new Buckets)->closureMode(false)->findOrFail((string) request('bucket'));
-
-        $results = [];
-
-        if (!empty($_FILES['files']['name'][0])) {
-            foreach (array_keys($_FILES['files']['name']) as $index) {
-                $entry = array_combine(array_keys($_FILES['files']), array_column($_FILES['files'], $index));
-                $results[] = Uploader::fromRequest($bucket, $entry, [
-                    'path'        => request('path') ? rtrim((string) request('path'), '/') . '/' . \App\Cdn\Support::slugName($entry['name']) : null,
-                    'uploaded_by' => 'panel:' . Auth::id(),
-                ]);
-            }
-        } elseif (request('url')) {
-            $results[] = Uploader::fromUrl($bucket, (string) request('url'), ['uploaded_by' => 'panel:' . Auth::id()]);
-        }
-
-        Registry::forgetBucket($bucket['slug']);
-
-        $ok = count(array_filter($results, fn($result) => $result['ok']));
-        if ($ok) Alerts::success("$ok file(s) uploaded.");
-
-        foreach ($results as $result) if (!$result['ok']) Alerts::danger($result['error'] . (isset($result['message']) ? " - {$result['message']}" : ''));
+        Alerts::success("Cleared {$result['variants']} generated image(s), freed " . \zFramework\Core\Helpers\File::humanFileSize($result['bytes']) . '.');
 
         return back();
     }
+    #endregion
 
-    /**
-     * @param string $id
-     * @return mixed
-     */
-    public function fileDelete(string $id): mixed
-    {
-        $file = (new Files)->closureMode(false)->findOrFail($id);
-        Uploader::delete($file);
-
-        Alerts::success('File deleted.');
-
-        return redirect(route('cdn-admin.files'));
-    }
-
+    #region Keys
     /**
      * @return mixed
      */
     public function keys(): mixed
     {
-        $project = $this->project();
-        $keys    = (new ApiKeys)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'DESC'])->get();
-        $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->get();
+        $project = Tenant::project();
 
-        # Shown once, on the redirect after creation, then dropped.
-        #
-        # Not JustOneTime: every request ends by clearing that store outright, so
-        # a value written before a redirect is gone before the page that would
-        # display it runs. Read-then-delete here is the behaviour that was
-        # wanted, spelled out.
-        $created = \zFramework\Core\Facades\Session::get('cdn-new-key') ?: null;
-        if ($created) \zFramework\Core\Facades\Session::delete('cdn-new-key');
+        # Shown once, on the redirect after creation, then dropped. Not
+        # JustOneTime: every request ends by clearing that store outright, so a
+        # value written before a redirect is gone before the page that would
+        # display it runs.
+        $created = Session::get('cdn-new-key') ?: null;
+        if ($created) Session::delete('cdn-new-key');
 
-        return view('cdn.pages.keys', compact('keys', 'buckets', 'created', 'project'));
+        return view('cdn.pages.keys', [
+            'keys'    => (new ApiKeys)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'DESC'])->get(),
+            'buckets' => Tenant::buckets(),
+            'created' => $created,
+            'project' => $project,
+        ]);
     }
 
     /**
@@ -320,12 +320,16 @@ class AdminController
      */
     public function keyCreate(): mixed
     {
-        $project = $this->project();
+        $project = Tenant::project();
 
         Validator::validate($_REQUEST, ['name' => ['required', 'max:120']]);
 
         $access = 'cdn_' . Support::token(12);
         $secret = Support::token(24);
+
+        # Only this project's buckets can be attached, whatever ids were posted.
+        $mine    = array_column(Tenant::buckets(), 'id');
+        $buckets = array_values(array_intersect(array_map('intval', (array) (request('buckets') ?: [])), array_map('intval', $mine)));
 
         (new ApiKeys)->insert([
             'project_id'    => $project['id'],
@@ -335,18 +339,14 @@ class AdminController
             'secret_cipher' => Secret::seal($secret),
             'scopes'        => json_encode(array_values(array_intersect(
                 (array) (request('scopes') ?: ['read']),
-                ['read', 'upload', 'delete', 'purge', 'admin']
+                ['read', 'upload', 'delete', 'purge']
             ))),
-            'buckets'     => request('buckets') ? json_encode(array_map('intval', (array) request('buckets'))) : null,
+            'buckets'     => count($buckets) ? json_encode($buckets) : null,
             'allowed_ips' => $this->list(request('allowed_ips')),
             'expires_at'  => request('expires_at') ?: null,
         ], just_insert: true);
 
-        # The only time the secret is readable outside the client. The keys page
-        # displays it and deletes it in the same request.
-        \zFramework\Core\Facades\Session::set('cdn-new-key', ['access' => $access, 'secret' => $secret]);
-
-        Alerts::success('Key created. The secret is shown once.');
+        Session::set('cdn-new-key', ['access' => $access, 'secret' => $secret]);
 
         return redirect(route('cdn-admin.keys'));
     }
@@ -357,74 +357,139 @@ class AdminController
      */
     public function keyRevoke(string $id): mixed
     {
-        (new ApiKeys)->where('id', $id)->update(['status' => 'revoked']);
-        Alerts::success('Key revoked.');
+        $key = (new ApiKeys)->where('project_id', Tenant::projectId())->where('id', (int) $id)->closureMode(false)->first();
+        if (!$key) abort(404);
+
+        (new ApiKeys)->where('id', $key['id'])->update(['status' => 'revoked']);
+        Alerts::success('Key revoked. Anything using it stops working now.');
 
         return back();
     }
+    #endregion
 
     /**
-     * @return mixed
-     */
-    public function logs(): mixed
-    {
-        $query = (new AccessLogs)->closureMode(false);
-
-        if ($bucket = request('bucket')) $query->where('bucket_id', (int) $bucket);
-        if ($status = request('status')) $query->where('status', (int) $status);
-        if ($cache = request('cache'))   $query->where('cache', $cache);
-
-        $logs    = $query->orderBy(['id' => 'DESC'])->paginate(50);
-        $buckets = (new Buckets)->closureMode(false)->get();
-
-        return view('cdn.pages.logs', compact('logs', 'buckets'));
-    }
-
-    /**
-     * @return mixed
-     */
-    public function purges(): mixed
-    {
-        $purges = (new Purges)->closureMode(false)->orderBy(['id' => 'DESC'])->paginate(50);
-
-        return view('cdn.pages.purges', compact('purges'));
-    }
-
-    /**
-     * What is configured and what the machine can actually do.
+     * Activity: what was served, and what was cleared.
      *
-     * The second half is the useful one: `transform.formats` listing avif means
-     * nothing if this build of PHP cannot write it, and that mismatch is
-     * otherwise only discovered as an image that silently never converts.
+     * The two used to be separate pages. They answer the same question - "what
+     * happened, and why does the site look like this" - so they are one page
+     * with two tabs.
+     *
+     * @return mixed
+     */
+    public function activity(): mixed
+    {
+        $project = Tenant::project();
+
+        $query = (new AccessLogs)->where('project_id', $project['id'])->closureMode(false);
+
+        if ($bucket = request('bucket')) $query->where('bucket_id', (int) Tenant::bucket((int) $bucket)['id']);
+        if ($cache = request('cache'))   $query->where('cache', (string) $cache);
+        if (request('errors'))           $query->where('status', '>=', 400);
+
+        return view('cdn.pages.activity', [
+            'logs'    => $query->orderBy(['id' => 'DESC'])->paginate(40),
+            'purges'  => (new Purges)->where('project_id', $project['id'])->closureMode(false)->orderBy(['id' => 'DESC'])->limit(30)->get(),
+            'buckets' => Tenant::buckets(),
+        ]);
+    }
+
+    /**
+     * Settings: the project, and - for an operator - the installation.
+     *
+     * The second half is the useful one to an operator: `transform.formats`
+     * listing avif means nothing if this build of PHP cannot write it, and that
+     * mismatch is otherwise only discovered as an image that silently never
+     * converts.
      *
      * @return mixed
      */
     public function settings(): mixed
     {
-        $capabilities = [
-            'driver'  => Transform::driver(),
-            'formats' => array_combine(
-                ['jpg', 'png', 'gif', 'webp', 'avif'],
-                array_map(fn($format) => Transform::supports($format), ['jpg', 'png', 'gif', 'webp', 'avif'])
-            ),
-            'apcu'    => function_exists('apcu_fetch'),
-            'redis'   => \zFramework\Core\Facades\Redis::available('cache'),
-            'finfo'   => class_exists('finfo'),
-            'gzip'    => function_exists('gzencode'),
-        ];
+        $project = Tenant::project();
+        $system  = null;
 
-        $disks = [];
-        foreach ((array) Support::config('storage.disks', []) as $name => $disk) {
-            $disks[$name] = [
-                'root'     => $disk['root'] ?? null,
-                'writable' => is_dir($disk['root'] ?? '') ? is_writable($disk['root']) : null,
-                'free'     => Storage::freeSpace($name),
+        if (Tenant::isOperator()) {
+            $disks = [];
+            foreach ((array) Support::config('storage.disks', []) as $name => $disk) {
+                $disks[$name] = [
+                    'root'     => $disk['root'] ?? null,
+                    'writable' => is_dir($disk['root'] ?? '') ? is_writable($disk['root']) : null,
+                    'free'     => Storage::freeSpace($name),
+                ];
+            }
+
+            $system = [
+                'capabilities' => [
+                    'driver'  => Transform::driver(),
+                    'formats' => array_combine(
+                        ['jpg', 'png', 'gif', 'webp', 'avif'],
+                        array_map(fn($format) => Transform::supports($format), ['jpg', 'png', 'gif', 'webp', 'avif'])
+                    ),
+                    'apcu'  => function_exists('apcu_fetch'),
+                    'redis' => \zFramework\Core\Facades\Redis::available('cache'),
+                    'finfo' => class_exists('finfo'),
+                ],
+                'disks'    => $disks,
+                'variants' => Storage::measure(Storage::variantRoot()),
+                'projects' => (new \App\Models\Cdn\Projects)->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get(),
             ];
         }
 
-        $variants = Storage::measure(Storage::variantRoot());
+        return view('cdn.pages.settings', compact('project', 'system'));
+    }
 
-        return view('cdn.pages.settings', compact('capabilities', 'disks', 'variants'));
+    /**
+     * Rename the project.
+     *
+     * @return mixed
+     */
+    public function settingsSave(): mixed
+    {
+        Validator::validate($_REQUEST, ['name' => ['required', 'max:120']]);
+
+        (new \App\Models\Cdn\Projects)->where('id', Tenant::projectId())->update(['name' => request('name')]);
+        Alerts::success('Saved.');
+
+        return back();
+    }
+
+    /**
+     * A servable url for a file, signed when the bucket needs it.
+     *
+     * @param array  $bucket
+     * @param string $path
+     * @return string
+     */
+    private function url(array $bucket, string $path): string
+    {
+        if (($bucket['visibility'] ?? 'public') === 'public')
+            return host() . rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/') . '/' . $bucket['slug'] . '/' . $path;
+
+        return Signature::url($bucket['slug'], $path, ['bucket' => $bucket, 'ttl' => 3600]);
+    }
+
+    /**
+     * An upload failure in words somebody can act on.
+     *
+     * @param array $result
+     * @return string
+     */
+    private function reason(array $result): string
+    {
+        $message = match ($result['error'] ?? '') {
+            'extension-blocked'       => 'That file type cannot be uploaded - it is one that can execute on a server.',
+            'extension-not-allowed'   => 'This bucket does not accept that file type.',
+            'mime-not-allowed'        => 'This bucket does not accept that content type.',
+            'too-large'               => 'That file is too large.',
+            'storage-quota-exceeded'  => 'Your storage quota is full.',
+            'remote-disabled'         => 'Fetching by URL is turned off.',
+            'private-address'         => 'That URL points inside a private network.',
+            'invalid-path'            => 'That path is not usable.',
+            'already-exists'          => 'Something is already stored at that path.',
+            default                   => 'Upload failed (' . ($result['error'] ?? 'unknown') . ').',
+        };
+
+        return $message . (isset($result['message']) ? ' ' . $result['message'] : '');
     }
 
     /**

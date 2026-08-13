@@ -307,16 +307,19 @@ class Metrics
      *
      * @param int|null $bucketId
      * @param int      $days
+     * @param int|null $projectId Scope to one tenant. Null is the whole
+     *                            installation, which only an operator sees.
      * @return array
      */
-    public static function series(?int $bucketId = null, int $days = 30): array
+    public static function series(?int $bucketId = null, int $days = 30, ?int $projectId = null): array
     {
         $model = (new Stats)
             ->where('date', '>=', date('Y-m-d', strtotime('-' . max(1, $days) . ' days')))
             ->closureMode(false)
             ->orderBy(['date' => 'ASC']);
 
-        if ($bucketId) $model->where('bucket_id', $bucketId);
+        if ($bucketId)  $model->where('bucket_id', $bucketId);
+        if ($projectId) $model->where('project_id', $projectId);
 
         $series = [];
         foreach ($model->get() as $row) {

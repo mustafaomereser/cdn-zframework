@@ -1,5 +1,6 @@
 @extends('cdn.main')
-@section('title', 'API Keys')
+@section('title', 'API keys')
+@section('lede', 'For uploading from your own code. Give each one only the powers it needs.')
 
 @section('body')
 
@@ -90,7 +91,7 @@
 
                     <div class="mb-3">
                         <label class="form-label">Scopes</label>
-                        <?php foreach (['read' => 'Read and list', 'upload' => 'Upload', 'delete' => 'Delete', 'purge' => 'Purge', 'admin' => 'Everything'] as $scope => $label) : ?>
+                        <?php foreach (['read' => 'Read and list files', 'upload' => 'Upload files', 'delete' => 'Delete files', 'purge' => 'Clear cached image sizes'] as $scope => $label) : ?>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="scopes[]" value="{{ $scope }}"
                                        id="scope-{{ $scope }}" {{ $scope == 'read' ? 'checked' : '' }}>

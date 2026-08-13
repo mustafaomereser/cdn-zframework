@@ -1,5 +1,6 @@
 @extends('cdn.main')
 @section('title', 'Buckets')
+@section('lede', 'A bucket is a folder with rules. Its name is the first part of every URL it serves.')
 
 @section('actions')
 <a href="{{ route('cdn-admin.buckets.create') }}" class="btn btn-primary btn-sm">
