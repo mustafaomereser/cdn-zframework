@@ -374,12 +374,22 @@ return [
      * Lookup caching.
      *
      * registry-ttl  Seconds a bucket or project row may be served from
-     *               GlobalCache. Every write path invalidates its own key, so
-     *               this is only the window for a change made outside the
-     *               application - a row edited directly in the database.
+     *               GlobalCache. Every write path invalidates its own key -
+     *               including the transfer counter, which drops the project the
+     *               moment a request takes it over its quota - so this is the
+     *               window for a change made outside the application: a row
+     *               edited straight in the database, or another machine's copy
+     *               of it when the cache is per-host rather than in Redis.
+     *
+     *               Two minutes rather than five: over a minute or two the
+     *               saving is already most of the saving there is, and the cost
+     *               of the rest is a stale answer to a question somebody is
+     *               waiting on. Do not take it to zero - the delivery path
+     *               reads these rows on every single asset, and that is the one
+     *               query per request this cache exists to avoid.
      */
     'cache' => [
-        'registry-ttl' => 300,
+        'registry-ttl' => 120,
     ],
 
     /**

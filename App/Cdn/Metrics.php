@@ -184,6 +184,8 @@ class Metrics
                       WHERE id = :id",
                     ['period' => $period, 'bytes' => $bytes, 'period2' => $period, 'id' => $id]
                 );
+
+                self::checkQuota((int) $id, (int) $bytes, $period);
             }
 
             foreach ($counters['bucket_id'] ?? [] as $id => $bytes)
@@ -197,6 +199,45 @@ class Metrics
         } catch (\Throwable $e) {
             if (function_exists('errorHandler')) errorHandler($e);
         }
+    }
+
+    /**
+     * Drop the cached project row when this request took it over its quota.
+     *
+     * The counter is written straight to the database, but the delivery path
+     * reads the project through Registry, which caches it for cache.registry-ttl
+     * - so a project went on serving for up to five minutes after it ran out,
+     * and started refusing only when something else happened to invalidate the
+     * row. Touching the project in the panel did it, which is why it looked
+     * like the limit only applied once somebody looked at it.
+     *
+     * No extra query: the cached row is already in this request, and the bytes
+     * just written are known. Adding them is enough to tell when the line has
+     * been crossed, and the only thing that happens then is a cache key being
+     * dropped - the next request reads the real total and refuses on it.
+     *
+     * @param int    $id
+     * @param int    $bytes
+     * @param string $period
+     * @return void
+     */
+    private static function checkQuota(int $id, int $bytes, string $period): void
+    {
+        $project = Registry::project($id);
+        if (!$project) return;
+
+        $quota = (int) ($project['bandwidth_quota'] ?? 0);
+        if ($quota <= 0) return;
+
+        # A row carrying an older period is starting this month from zero, and
+        # what was just written is the whole of it.
+        $used = ($project['bandwidth_period'] ?? null) === $period
+            ? (int) ($project['bandwidth_used'] ?? 0) + $bytes
+            : $bytes;
+
+        if ($used < $quota) return;
+
+        Registry::forgetProject($id);
     }
 
     /**
