@@ -22,11 +22,18 @@
         @endif
     </ul>
 
-    <div id="auth-error" class="alert alert-danger d-none py-2 small"></div>
+    <?php # Server-rendered: the validator reports by putting alerts in the
+          # session and redirecting here, and the public layout does not load
+          # the toast library. ?>
+    <?php foreach ($alerts as $alert) : ?>
+        <div class="alert alert-<?= $alert[0] === 'success' ? 'success' : ($alert[0] === 'danger' ? 'danger' : 'info') ?> py-2 small">
+            <?= e((string) $alert[1], false) ?>
+        </div>
+    <?php endforeach ?>
 
     <div class="tab-content">
         <div class="tab-pane fade show active" id="pane-signin">
-            <form class="auth-form" action="{{ route('sign-in') }}" method="POST">
+            <form action="{{ route('sign-in') }}" method="POST">
                 <?= csrf() ?>
                 <input type="hidden" name="next" value="{{ $next }}">
 
@@ -51,7 +58,8 @@
 
         @if($registration)
         <div class="tab-pane fade" id="pane-signup">
-            <form class="auth-form" action="{{ route('sign-up') }}" method="POST">
+            <form action="{{ route('sign-up') }}" method="POST">
+                <input type="hidden" name="tab" value="signup">
                 <?= csrf() ?>
                 <input type="hidden" name="next" value="{{ $next }}">
 
@@ -98,45 +106,14 @@
 
 @section('footer')
 <script>
-    // The endpoints answer json - they are the same ones the API uses - so the
-    // form is submitted with fetch and the reply decides where to go. A plain
-    // form post would leave the browser looking at a page of json.
-    document.querySelectorAll('.auth-form').forEach(form => {
-        form.addEventListener('submit', async event => {
-            event.preventDefault();
-
-            const button = form.querySelector('button[type=submit], button:not([type])');
-            const error  = document.getElementById('auth-error');
-
-            button.disabled = true;
-            error.classList.add('d-none');
-
-            try {
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                });
-
-                const payload = await response.json();
-
-                if (payload.status) return window.location = payload.redirect || '/panel';
-
-                // Validation failures come back as alerts on the payload.
-                const messages = Object.values(payload.alerts || {}).map(alert => alert[1]).filter(Boolean);
-
-                error.textContent = messages.length ? messages.join(' ') : <?= json_encode(_l('cdn.auth.failed')) ?>;
-                error.classList.remove('d-none');
-            } catch (thrown) {
-                error.textContent = <?= json_encode(_l('cdn.auth.network')) ?>;
-                error.classList.remove('d-none');
-            }
-
-            button.disabled = false;
-        });
-    });
-
     // /auth#signup opens the second tab, so the landing page can link to it.
     if (location.hash === '#signup') document.getElementById('tab-signup')?.click();
+
+    // A wrong password lands back here on the sign-in tab; a rejected sign-up
+    // should land back on the sign-up one rather than on a tab the person was
+    // not looking at.
+    if (document.querySelector('.alert-danger') && new URLSearchParams(location.search).get('tab') === 'signup') {
+        document.getElementById('tab-signup')?.click();
+    }
 </script>
 @endsection

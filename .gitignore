@@ -30,3 +30,6 @@ rr.exe
 resource/lang/*
 !resource/lang/en/
 !resource/lang/tr/
+.syncftp
+syncftp.exe
+syncftp

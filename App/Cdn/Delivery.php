@@ -189,7 +189,7 @@ class Delivery
         }
 
         $headers = [
-            'Content-Type'   => $mime,
+            'Content-Type'   => self::withCharset($mime),
             'Content-Length' => (string) $size,
             'Cache-Control'  => $cacheControl,
             'Accept-Ranges'  => ($options['ranges'] ?? Support::config('delivery.ranges', true)) ? 'bytes' : 'none',
@@ -517,4 +517,40 @@ class Delivery
         # The response is complete. Empty signal: everything was written above.
         throw new ResponseSignal();
     }
+    /**
+     * A text type, with the encoding said out loud.
+     *
+     * A javascript file served as `application/javascript` with no charset is a
+     * file the browser decodes with a guess - the document's encoding, or the
+     * locale's, or windows-1252. Every non-ascii character in it then arrives
+     * as mojibake, and the file is byte-for-byte correct on disk the whole
+     * time, which is what makes it hard to see.
+     *
+     * Only for the types where an encoding means anything. An image with a
+     * charset is nonsense, and a charset on `application/octet-stream` is a
+     * claim about bytes nobody has looked at.
+     *
+     * @param string $mime
+     * @return string
+     */
+    private static function withCharset(string $mime): string
+    {
+        # Already said, by a stored value or by a bucket.
+        if (str_contains(strtolower($mime), 'charset=')) return $mime;
+
+        $charset = (string) Support::config('delivery.charset', 'utf-8');
+        if ($charset === '') return $mime;
+
+        $type    = strtolower(trim(strtok($mime, ';')));
+        $textual = [
+            'application/javascript', 'application/x-javascript', 'text/javascript',
+            'application/json', 'application/ld+json', 'application/xml',
+            'image/svg+xml', 'application/manifest+json',
+        ];
+
+        if (!str_starts_with($type, 'text/') && !in_array($type, $textual, true)) return $mime;
+
+        return $mime . '; charset=' . $charset;
+    }
+
 }

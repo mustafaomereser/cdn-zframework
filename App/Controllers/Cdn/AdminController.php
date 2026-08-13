@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Cdn;
 
+use App\Cdn\Flash;
 use App\Cdn\Metrics;
 use App\Cdn\Purger;
 use App\Cdn\Registry;
@@ -156,7 +157,7 @@ class AdminController
                 'uploaded_by' => 'panel:' . Auth::id(),
             ]);
         } else {
-            Alerts::danger(_l('cdn.alerts.upload-empty'));
+            Flash::danger(_l('cdn.alerts.upload-empty'));
             return back();
         }
 
@@ -164,8 +165,8 @@ class AdminController
 
         $done = array_values(array_filter($results, fn($result) => $result['ok']));
 
-        if (count($done)) Alerts::success(_l('cdn.alerts.uploaded', ['count' => count($done)]));
-        foreach ($results as $result) if (!$result['ok']) Alerts::danger($this->reason($result));
+        if (count($done)) Flash::success(_l('cdn.alerts.uploaded', ['count' => count($done)]));
+        foreach ($results as $result) if (!$result['ok']) Flash::danger($this->reason($result));
 
         # Straight to the file when it is the only one: the next thing wanted is
         # always its URL.
@@ -183,7 +184,7 @@ class AdminController
         $file = Tenant::file($id);
         Uploader::delete($file);
 
-        Alerts::success(_l('cdn.alerts.file-deleted', ['path' => $file['path']]));
+        Flash::success(_l('cdn.alerts.file-deleted', ['path' => $file['path']]));
 
         return redirect(route('cdn-admin.files'));
     }
@@ -242,7 +243,7 @@ class AdminController
         $clash = $model->where('project_id', $project['id'])->where('slug', $slug)->closureMode(false)->first();
 
         if ($clash && (!$existing || (int) $clash['id'] !== (int) $existing['id'])) {
-            Alerts::danger(_l('cdn.alerts.bucket-taken', ['slug' => $slug, 'project' => $project['name']]));
+            Flash::danger(_l('cdn.alerts.bucket-taken', ['slug' => $slug, 'project' => $project['name']]));
             return back();
         }
 
@@ -276,7 +277,7 @@ class AdminController
             Registry::forgetBucket($existing);
             Registry::forgetBucket(['project_id' => $project['id'], 'slug' => $slug]);
 
-            Alerts::success(_l('cdn.alerts.bucket-saved'));
+            Flash::success(_l('cdn.alerts.bucket-saved'));
         } else {
             $model->insert($columns + [
                 'project_id'  => $project['id'],
@@ -285,7 +286,7 @@ class AdminController
                 'signing_key' => Support::token(24),
             ]);
 
-            Alerts::success(_l('cdn.alerts.bucket-created', ['path' => '/' . $project['slug'] . '/' . $slug]));
+            Flash::success(_l('cdn.alerts.bucket-created', ['path' => '/' . $project['slug'] . '/' . $slug]));
         }
 
         return redirect(route('cdn-admin.buckets'));
@@ -309,7 +310,7 @@ class AdminController
         (new Buckets)->where('id', $bucket['id'])->delete();
         Registry::forgetBucket($bucket);
 
-        Alerts::success(_l('cdn.alerts.bucket-deleted', ['count' => count($files)]));
+        Flash::success(_l('cdn.alerts.bucket-deleted', ['count' => count($files)]));
 
         return redirect(route('cdn-admin.buckets'));
     }
@@ -322,7 +323,7 @@ class AdminController
     {
         $result = Purger::bucket(Tenant::bucket($id), 'panel:' . Auth::id());
 
-        Alerts::success(_l('cdn.alerts.purged', ['count' => $result['variants'], 'size' => \zFramework\Core\Helpers\File::humanFileSize($result['bytes'])]));
+        Flash::success(_l('cdn.alerts.purged', ['count' => $result['variants'], 'size' => \zFramework\Core\Helpers\File::humanFileSize($result['bytes'])]));
 
         return back();
     }
@@ -396,7 +397,7 @@ class AdminController
         if (!$key) abort(404);
 
         (new ApiKeys)->where('id', $key['id'])->update(['status' => 'revoked']);
-        Alerts::success(_l('cdn.alerts.key-revoked'));
+        Flash::success(_l('cdn.alerts.key-revoked'));
 
         return back();
     }
@@ -492,7 +493,8 @@ class AdminController
             'files'   => array_sum(array_map(fn($bucket) => (int) $bucket['files_count'], $buckets)),
             'month'   => ($project['bandwidth_period'] ?? null) === date('Y-m') ? (int) $project['bandwidth_used'] : 0,
             'usage'   => Tenant::usage(),
-            'only'    => count(Tenant::projects()) < 2,
+            # The first one is the account's namespace and cannot be deleted.
+            'only'    => (int) Tenant::projects()[0]['id'] === (int) $project['id'],
             'prefix'  => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
         ]);
     }
@@ -528,13 +530,13 @@ class AdminController
         # two of them in a dropdown never sees the same label twice. Said out
         # loud rather than silently suffixed - the name is theirs to pick.
         if ((new Projects)->where('name', $name)->closureMode(false)->first()) {
-            Alerts::danger(_l('cdn.alerts.name-taken', ['name' => $name]));
+            Flash::danger(_l('cdn.alerts.name-taken', ['name' => $name]));
             return back();
         }
 
         $project = Tenant::create(Auth::user() ?: [], $name);
 
-        Alerts::success(_l('cdn.alerts.project-created', ['path' => '/' . $project['slug'] . '/']));
+        Flash::success(_l('cdn.alerts.project-created', ['path' => '/' . $project['slug'] . '/']));
 
         return redirect(route('cdn-admin.projects.show', ['id' => $project['id']]));
     }
@@ -553,10 +555,11 @@ class AdminController
     {
         $project = Tenant::project($id);
 
-        # An account with no project is an account that cannot upload anything,
-        # and the panel is built on there being one.
-        if (count(Tenant::projects()) < 2) {
-            Alerts::danger(_l('cdn.alerts.project-last'));
+        # The first project is the account's own namespace - its slug is the
+        # account slug, and every other project's is derived from it. The rest
+        # can go, however many are left.
+        if ((int) Tenant::projects()[0]['id'] === (int) $project['id']) {
+            Flash::danger(_l('cdn.alerts.project-main'));
 
             return back();
         }
@@ -580,7 +583,7 @@ class AdminController
         Tenant::select(null);
         Tenant::flushRequestState();
 
-        Alerts::success(_l('cdn.alerts.project-deleted', ['name' => $project['name'], 'files' => count($files)]));
+        Flash::success(_l('cdn.alerts.project-deleted', ['name' => $project['name'], 'files' => count($files)]));
 
         return redirect(route('cdn-admin.projects'));
     }
@@ -621,14 +624,14 @@ class AdminController
 
         $clash = (new Projects)->where('name', $name)->closureMode(false)->first();
         if ($clash && (int) $clash['id'] !== (int) $project['id']) {
-            Alerts::danger(_l('cdn.alerts.name-taken', ['name' => $name]));
+            Flash::danger(_l('cdn.alerts.name-taken', ['name' => $name]));
             return back();
         }
 
         (new Projects)->where('id', $project['id'])->update(['name' => $name]);
         Registry::forgetProject((int) $project['id']);
 
-        Alerts::success(_l('cdn.alerts.saved'));
+        Flash::success(_l('cdn.alerts.saved'));
 
         return back();
     }

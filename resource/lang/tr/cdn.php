@@ -476,6 +476,7 @@ return [
 
     'alerts' => [
         'suspended'       => 'Bu hesap askıya alınmış.',
+        'suspended-because' => 'Bu hesap askıya alındı: {reason}',
         'quota-saved'     => '{project} için kota kaydedildi.',
         'bandwidth-reset' => '{project} için bu ayın trafiği sıfırlandı.',
         'suspended-project' => '{project} askıya alındı — URL\'leri artık 403 dönüyor.',

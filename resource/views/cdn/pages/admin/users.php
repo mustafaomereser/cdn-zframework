@@ -89,6 +89,9 @@ $split = function (int $bytes) use ($units): array {
                                     <?php if ($suspended) : ?><span class="badge text-bg-danger ms-1"><?= _l('cdn.operator.suspended') ?></span><?php endif ?>
                                 </div>
                                 <div class="hint mono truncate notranslate" translate="no"><?= e($user['email'], false) ?></div>
+                                <?php if ($suspended && ($user['suspend_reason'] ?? '')) : ?>
+                                    <div class="small text-danger"><?= e((string) $user['suspend_reason'], false) ?></div>
+                                <?php endif ?>
                             </td>
 
                             <td class="small notranslate" translate="no">
@@ -117,13 +120,19 @@ $split = function (int $bytes) use ($units): array {
                                 </button>
 
                                 <?php if (!$self) : ?>
-                                    <form class="d-inline" method="POST" action="{{ route('cdn-admin.operator.users.status', ['id' => $user['id']]) }}">
-                                        <?= csrf() ?>
-                                        <input type="hidden" name="status" value="<?= $suspended ? 'active' : 'suspended' ?>">
-                                        <button class="btn btn-sm btn-outline-<?= $suspended ? 'success' : 'warning' ?>">
-                                            <?= _l($suspended ? 'cdn.operator.restore' : 'cdn.operator.suspend') ?>
+                                    <?php # Suspending asks why; restoring does not need to. ?>
+                                    <?php if ($suspended) : ?>
+                                        <form class="d-inline" method="POST" action="{{ route('cdn-admin.operator.users.status', ['id' => $user['id']]) }}">
+                                            <?= csrf() ?>
+                                            <input type="hidden" name="status" value="active">
+                                            <button class="btn btn-sm btn-outline-success">{{ _l('cdn.operator.restore') }}</button>
+                                        </form>
+                                    <?php else : ?>
+                                        <button class="btn btn-sm btn-outline-warning" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#suspend-<?= $user['id'] ?>">
+                                            {{ _l('cdn.operator.suspend') }}
                                         </button>
-                                    </form>
+                                    <?php endif ?>
 
                                     <?php if (!$locked) : ?>
                                         <form class="d-inline" method="POST" action="{{ route('cdn-admin.operator.users.operator', ['id' => $user['id']]) }}">
@@ -150,6 +159,29 @@ $split = function (int $bytes) use ($units): array {
                         [$storageAmount, $storageUnit]     = $split((int) $user['quota']);
                         [$bandwidthAmount, $bandwidthUnit] = $split((int) ($user['bandwidth-quota'] ?? 0));
                         ?>
+                        <?php if (!$suspended && !$self) : ?>
+                            <tr class="collapse" id="suspend-<?= $user['id'] ?>">
+                                <td colspan="5" class="bg-body-tertiary">
+                                    <form class="row g-2 align-items-end" method="POST"
+                                          action="{{ route('cdn-admin.operator.users.status', ['id' => $user['id']]) }}">
+                                        <?= csrf() ?>
+                                        <input type="hidden" name="status" value="suspended">
+
+                                        <div class="col-sm-8">
+                                            <label class="form-label small mb-1">{{ _l('cdn.operator.reason') }}</label>
+                                            <input name="reason" class="form-control form-control-sm" maxlength="255"
+                                                   placeholder="{{ _l('cdn.operator.reason-holder') }}">
+                                            <div class="form-text">{{ _l('cdn.operator.reason-help') }}</div>
+                                        </div>
+
+                                        <div class="col-sm-4">
+                                            <button class="btn btn-sm btn-warning">{{ _l('cdn.operator.suspend') }}</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endif ?>
+
                         <tr class="collapse" id="quota-<?= $user['id'] ?>">
                             <td colspan="5" class="bg-body-tertiary">
                                 <form class="row g-2 align-items-end" method="POST"

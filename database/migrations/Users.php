@@ -26,6 +26,11 @@ class Users
             # difference between suspending somebody and deleting them.
             'status'    => ['varchar:20', 'default:active', 'index'],
 
+            # Why the account is suspended, in the operator's words. Shown at
+            # sign-in, which is the only place somebody who cannot sign in will
+            # see anything at all.
+            'suspend_reason' => ['varchar:255', 'nullable'],
+
             # Set from the panel. `auth.operators` in config/cdn.php still wins
             # and is the way back in if this column ever leaves nobody holding
             # the keys - a list in a file cannot be revoked by a mistake in a

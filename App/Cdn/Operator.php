@@ -190,6 +190,11 @@ class Operator
         ]);
 
         foreach ((new Projects)->where('owner_id', $user['id'])->closureMode(false)->get() as $project) {
+            # A project an operator gave its own numbers keeps them. Rewriting
+            # those here is how a deliberate 50 GB quietly becomes the account's
+            # 5 the next time somebody touches the account.
+            if (($project['quota_mode'] ?? 'account') === 'custom') continue;
+
             (new Projects)->where('id', $project['id'])->update([
                 'storage_quota'   => $storage,
                 'bandwidth_quota' => $bandwidth,
@@ -203,6 +208,43 @@ class Operator
         self::audit('quota', 'user', $user, [
             'storage'   => [(int) ($user['storage_quota'] ?? 0), $storage],
             'bandwidth' => [(int) ($user['bandwidth_quota'] ?? 0), $bandwidth],
+        ]);
+    }
+
+    /**
+     * Give one project numbers of its own, or put it back on the account's.
+     *
+     * The flag is what makes this survive: without it there is no way to tell a
+     * project that was given 50 GB on purpose from one that happens to match its
+     * owner, and the next account-level edit takes it away.
+     *
+     * @param array $project
+     * @param bool  $custom
+     * @param int   $storage
+     * @param int   $bandwidth
+     * @return void
+     */
+    public static function projectQuota(array $project, bool $custom, int $storage, int $bandwidth): void
+    {
+        if (!$custom) {
+            $owner = (new User)->closureMode(false)->where('id', (int) $project['owner_id'])->first() ?: [];
+
+            $storage   = (int) ($owner['storage_quota'] ?? 0);
+            $bandwidth = (int) ($owner['bandwidth_quota'] ?? 0);
+        }
+
+        (new Projects)->where('id', $project['id'])->update([
+            'quota_mode'      => $custom ? 'custom' : 'account',
+            'storage_quota'   => max(0, $storage),
+            'bandwidth_quota' => max(0, $bandwidth),
+        ]);
+
+        Registry::forgetProject((int) $project['id']);
+
+        self::audit('quota', 'project', $project, [
+            'mode'      => $custom ? 'custom' : 'account',
+            'storage'   => [(int) $project['storage_quota'], max(0, $storage)],
+            'bandwidth' => [(int) $project['bandwidth_quota'], max(0, $bandwidth)],
         ]);
     }
 
@@ -237,15 +279,22 @@ class Operator
      * @param string $status active | suspended
      * @return void
      */
-    public static function projectStatus(array $project, string $status): void
+    public static function projectStatus(array $project, string $status, string $reason = ''): void
     {
         $status = $status === 'suspended' ? 'suspended' : 'active';
+        $reason = trim(mb_substr($reason, 0, 255));
 
-        (new Projects)->where('id', $project['id'])->update(['status' => $status]);
+        (new Projects)->where('id', $project['id'])->update([
+            'status' => $status,
+
+            # Cleared on restore. A reason that outlives the suspension it
+            # explains is a reason somebody reads about a project that works.
+            'suspend_reason' => $status === 'suspended' ? ($reason ?: null) : null,
+        ]);
 
         Registry::forgetProject((int) $project['id']);
 
-        self::audit($status === 'suspended' ? 'suspend' : 'restore', 'project', $project, []);
+        self::audit($status === 'suspended' ? 'suspend' : 'restore', 'project', $project, ['reason' => $reason]);
     }
 
     /**
@@ -258,20 +307,28 @@ class Operator
      * @param string $status
      * @return void
      */
-    public static function userStatus(array $user, string $status): void
+    public static function userStatus(array $user, string $status, string $reason = ''): void
     {
         $status = $status === 'suspended' ? 'suspended' : 'active';
+        $reason = trim(mb_substr($reason, 0, 255));
 
         if ($status === 'suspended' && (int) $user['id'] === (int) Auth::id()) return;
 
-        (new User)->where('id', $user['id'])->update(['status' => $status]);
+        (new User)->where('id', $user['id'])->update([
+            'status'         => $status,
+            'suspend_reason' => $status === 'suspended' ? ($reason ?: null) : null,
+        ]);
 
         foreach ((new Projects)->where('owner_id', $user['id'])->closureMode(false)->get() as $project) {
-            (new Projects)->where('id', $project['id'])->update(['status' => $status]);
+            (new Projects)->where('id', $project['id'])->update([
+                'status'         => $status,
+                'suspend_reason' => $status === 'suspended' ? ($reason ?: null) : null,
+            ]);
+
             Registry::forgetProject((int) $project['id']);
         }
 
-        self::audit($status === 'suspended' ? 'suspend' : 'restore', 'user', $user, []);
+        self::audit($status === 'suspended' ? 'suspend' : 'restore', 'user', $user, ['reason' => $reason]);
     }
 
     /**

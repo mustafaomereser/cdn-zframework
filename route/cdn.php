@@ -143,6 +143,7 @@ Route::pre((string) (config('cdn.admin.route') ?: '/cdn-admin') . '/admin', '/cd
         Route::post('/users/{id}/operator', [OperatorController::class, 'operator'])->name('users.operator');
         Route::post('/users/{id}/delete', [OperatorController::class, 'userDelete'])->name('users.delete');
 
+        Route::post('/projects/{id}/quota', [OperatorController::class, 'projectQuota'])->name('projects.quota');
         Route::post('/projects/{id}/bandwidth', [OperatorController::class, 'bandwidthReset'])->name('projects.bandwidth');
         Route::post('/projects/{id}/status', [OperatorController::class, 'projectStatus'])->name('projects.status');
 

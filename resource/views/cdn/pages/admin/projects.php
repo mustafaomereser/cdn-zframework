@@ -48,8 +48,24 @@ $split = function (int $bytes) use ($units): array {
     </div>
 </div>
 
+<?php
+$split = function (int $bytes) use ($units): array {
+    if ($bytes <= 0) return [0, 'GB'];
+
+    foreach (array_reverse($units, true) as $unitName => $size) {
+        if ($bytes >= $size && $bytes % $size === 0) return [(int) ($bytes / $size), $unitName];
+    }
+
+    return [round($bytes / (1024 ** 3), 2), 'GB'];
+};
+?>
+
 <?php foreach ($rows['items'] as $project) :
     $suspended = ($project['status'] ?? 'active') !== 'active';
+    $custom    = ($project['quota_mode'] ?? 'account') === 'custom';
+
+    [$storageAmount, $storageUnit]     = $split((int) $project['storage_quota']);
+    [$bandwidthAmount, $bandwidthUnit] = $split((int) $project['bandwidth_quota']);
 
     [$storageAmount, $storageUnit]     = $split((int) $project['storage_quota']);
     [$bandwidthAmount, $bandwidthUnit] = $split((int) $project['bandwidth_quota']);
@@ -69,6 +85,10 @@ $split = function (int $bytes) use ($units): array {
                         <?= e($project['name'], false) ?>
                         <?php if ($suspended) : ?><span class="badge text-bg-danger ms-1"><?= _l('cdn.operator.suspended') ?></span><?php endif ?>
                     </h6>
+                    <?php if ($suspended && ($project['suspend_reason'] ?? '')) : ?>
+                        <div class="small text-danger mb-1"><?= e((string) $project['suspend_reason'], false) ?></div>
+                    <?php endif ?>
+
                     <div class="hint mono">
                         <?= rtrim((string) config('cdn.delivery.url-prefix'), '/') ?>/<?= e($project['slug'], false) ?>/…
                         <?php if ($project['owner']) : ?>
@@ -77,27 +97,73 @@ $split = function (int $bytes) use ($units): array {
                     </div>
                 </div>
 
-                <div class="d-flex gap-2">
-                    <form method="POST" action="{{ route('cdn-admin.operator.projects.status', ['id' => $project['id']]) }}">
-                        <?= csrf() ?>
-                        <input type="hidden" name="status" value="<?= $suspended ? 'active' : 'suspended' ?>">
-                        <button class="btn btn-sm btn-outline-<?= $suspended ? 'success' : 'warning' ?>">
-                            <?= _l($suspended ? 'cdn.operator.restore' : 'cdn.operator.suspend') ?>
-                        </button>
-                    </form>
-                </div>
+                <form class="d-flex gap-2 align-items-center" method="POST"
+                      action="{{ route('cdn-admin.operator.projects.status', ['id' => $project['id']]) }}">
+                    <?= csrf() ?>
+                    <input type="hidden" name="status" value="<?= $suspended ? 'active' : 'suspended' ?>">
+
+                    <?php # Typed here rather than on a page of its own: the
+                          # moment somebody suspends something is the only moment
+                          # they know why, and asking later gets nothing. ?>
+                    <?php if (!$suspended) : ?>
+                        <input name="reason" class="form-control form-control-sm" style="min-width: 220px"
+                               placeholder="{{ _l('cdn.operator.reason-holder') }}" maxlength="255">
+                    <?php endif ?>
+
+                    <button class="btn btn-sm btn-outline-<?= $suspended ? 'success' : 'warning' ?> text-nowrap">
+                        <?= _l($suspended ? 'cdn.operator.restore' : 'cdn.operator.suspend') ?>
+                    </button>
+                </form>
             </div>
 
             <div class="row g-3">
                 <div class="col-lg-7">
-                    <?php # The allowance is the account's, and it is edited on
-                          # the Accounts page - a project of its own has no
-                          # quota to set, it has a share of one. ?>
-                    <div class="hint small">
-                        <?= _l('cdn.operator.quota-on-account', [
-                            'user' => e((string) ($project['owner']['username'] ?? '—'), false),
-                        ]) ?>
-                    </div>
+                    <form method="POST" action="{{ route('cdn-admin.operator.projects.quota', ['id' => $project['id']]) }}">
+                        <?= csrf() ?>
+
+                        <?php # Off, this project follows the account and is
+                              # rewritten whenever the account changes. On, it
+                              # keeps its own numbers and an account-level edit
+                              # leaves it alone. ?>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="custom" value="1"
+                                   id="custom-<?= $project['id'] ?>" <?= $custom ? 'checked' : '' ?>
+                                   data-toggle-fields="#quota-fields-<?= $project['id'] ?>">
+                            <label class="form-check-label small" for="custom-<?= $project['id'] ?>">
+                                <b>{{ _l('cdn.operator.custom-quota') }}</b>
+                                <div class="hint">
+                                    <?= _l('cdn.operator.custom-quota-help', [
+                                        'user' => e((string) ($project['owner']['username'] ?? '—'), false),
+                                    ]) ?>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div id="quota-fields-<?= $project['id'] ?>" class="<?= $custom ? '' : 'd-none' ?>">
+                            <label class="form-label small mb-1">{{ _l('cdn.operator.storage-quota') }}</label>
+                            <div class="input-group input-group-sm mb-2">
+                                <input name="storage" class="form-control" value="<?= $storageAmount ?>" inputmode="decimal">
+                                <select name="storage-unit" class="form-select" style="max-width: 92px" data-plain>
+                                    <?php foreach (array_keys($units) as $unit) : ?>
+                                        <option value="<?= $unit ?>" <?= $unit === $storageUnit ? 'selected' : '' ?>><?= $unit ?></option>
+                                    <?php endforeach ?>
+                                </select>
+                            </div>
+
+                            <label class="form-label small mb-1">{{ _l('cdn.operator.bandwidth-quota') }}</label>
+                            <div class="input-group input-group-sm mb-2">
+                                <input name="bandwidth" class="form-control" value="<?= $bandwidthAmount ?>" inputmode="decimal">
+                                <select name="bandwidth-unit" class="form-select" style="max-width: 92px" data-plain>
+                                    <?php foreach (array_keys($units) as $unit) : ?>
+                                        <option value="<?= $unit ?>" <?= $unit === $bandwidthUnit ? 'selected' : '' ?>><?= $unit ?></option>
+                                    <?php endforeach ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-sm btn-primary">{{ _l('cdn.common.save') }}</button>
+                        <span class="hint small ms-1">{{ _l('cdn.operator.zero-unlimited') }}</span>
+                    </form>
                 </div>
 
                 <div class="col-lg-5">

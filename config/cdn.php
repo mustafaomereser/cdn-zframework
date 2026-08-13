@@ -93,6 +93,12 @@ return [
             ],
         ],
 
+        # Added to the Content-Type of text payloads - css, js, json, svg. A
+        # javascript file with no charset is decoded with a guess, and every
+        # non-ascii character in it arrives as mojibake while the file on disk
+        # stays byte-for-byte correct. Empty to send the bare type.
+        'charset'     => 'utf-8',
+
         # Sent with every asset so a browser's Resource Timing API can read the
         # real transfer numbers cross-origin. '*' or null.
         'timing-allow-origin' => '*',

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Cdn\Flash;
 use App\Cdn\Support;
 use App\Cdn\Tenant;
 use App\Models\User;
@@ -34,9 +35,13 @@ class AuthController extends Controller
      */
     public function auth(): mixed
     {
+        # Rendered into the page rather than left to the toast library: the
+        # public layout does not load it, and an error somebody cannot see is an
+        # error they blame on the form.
         return view('cdn.auth', [
             'registration' => (bool) Support::config('auth.registration', true),
             'next'         => (string) (request('next') ?: ''),
+            'alerts'       => Flash::take(),
         ]);
     }
 
@@ -44,50 +49,58 @@ class AuthController extends Controller
      * @param SigninRequest $validate
      * @return mixed
      */
-    public function signin(SigninRequest $validate): mixed
+    public function signin(): mixed
     {
-        $validate = $validate->validated();
-        $response = ['status' => 0];
+        $validate = $this->check(new SigninRequest);
 
-        if (Auth::attempt(['email' => $validate['email'], 'password' => $validate['password']], (bool) $validate['keep-logged-in'])) {
-            # Suspended after the credentials, not before: answering differently
-            # to a suspended account and a wrong password tells anybody who asks
-            # which addresses have accounts here.
-            if ((string) (Auth::user()['status'] ?? 'active') === 'suspended') {
-                Auth::logout();
+        if ($validate === null) return $this->refuse();
 
-                Alerts::danger(_l('cdn.alerts.suspended'));
+        if (!Auth::attempt(['email' => $validate['email'], 'password' => $validate['password']], (bool) $validate['keep-logged-in'])) {
+            Flash::danger(_l('cdn.alerts.signin-failed'));
 
-                return Response::json($response);
-            }
+            return $this->refuse();
+        }
 
-            $response['status'] = 1;
+        # Suspended after the credentials, not before: answering differently to
+        # a suspended account and a wrong password tells anybody who asks which
+        # addresses have accounts here.
+        if ((string) (Auth::user()['status'] ?? 'active') === 'suspended') {
+            $reason = trim((string) (Auth::user()['suspend_reason'] ?? ''));
 
-            # The project is created on first sign-in when the account predates
-            # it - an account added straight to the database, or one from before
-            # this was a CDN.
-            Tenant::project();
+            Auth::logout();
 
-            $response['redirect'] = $this->next();
-        } else Alerts::danger(_l('cdn.alerts.signin-failed'));
+            Flash::danger($reason
+                ? _l('cdn.alerts.suspended-because', ['reason' => $reason])
+                : _l('cdn.alerts.suspended'));
 
-        return Response::json($response);
+            return $this->refuse();
+        }
+
+        # The project is created on first sign-in when the account predates it -
+        # an account added straight to the database, or one from before this was
+        # a CDN.
+        Tenant::project();
+
+        return redirect($this->next());
     }
 
     /**
      * @param SignupRequest $validate
      * @return mixed
      */
-    public function signup(SignupRequest $validate): mixed
+    public function signup(): mixed
     {
         # Checked here rather than only hidden in the form: a closed
         # registration that can still be posted to is not closed.
         if (!Support::config('auth.registration', true)) {
-            Alerts::danger(_l('cdn.alerts.registration-closed'));
-            return Response::json(['status' => 0]);
+            Flash::danger(_l('cdn.alerts.registration-closed'));
+
+            return $this->refuse();
         }
 
-        $validate = $validate->validated();
+        $validate = $this->check(new SignupRequest);
+
+        if ($validate === null) return $this->refuse();
 
         $user = (new User)->insert([
             'username'  => $validate['username'],
@@ -102,9 +115,78 @@ class AuthController extends Controller
         Auth::login($user);
         Tenant::create($user);
 
-        Alerts::success(_l('cdn.alerts.welcome'));
+        Flash::success(_l('cdn.alerts.welcome'));
 
-        return Response::json(['status' => 1, 'redirect' => $this->next()]);
+        return redirect($this->next());
+    }
+
+    /**
+     * Run a request's rules without letting the validator answer for us.
+     *
+     * Given a callback, Validator::validate() hands back the errors instead of
+     * redirecting - and that matters here, because its own redirect loses the
+     * messages: run.php clears the framework's alerts as soon as a redirect is
+     * sent, so every "e-mail already taken" arrived at a page with nothing on
+     * it and the form said "that did not go through" for all of them.
+     *
+     * @param object $request
+     * @return array|null Null when something failed.
+     */
+    private function check(object $request): ?array
+    {
+        $failed = false;
+
+        $data = \zFramework\Core\Validator::validate(
+            $_REQUEST,
+            $request->columns(),
+            [],
+            function (array $errors) use (&$failed) {
+                $failed = true;
+
+                foreach ($errors as $list) foreach ($list as $message) Flash::danger((string) $message);
+            }
+        );
+
+        return $failed ? null : $data;
+    }
+
+    /**
+     * Back to the form, with whatever was just said about it.
+     *
+     * These used to answer json and the page posted them with fetch, which
+     * worked right up until the validator refused something: it reports by
+     * putting alerts in the session and redirecting, so the fetch followed a
+     * 302 to a page of html and the form showed "that did not go through" for
+     * every wrong password, taken username and short password alike.
+     *
+     * A plain form post has none of that problem, and works with javascript
+     * off, which a sign-in page has no business requiring.
+     *
+     * @return mixed
+     */
+    private function refuse(): mixed
+    {
+        $query = [];
+
+        if ($this->wanted()) $query['next'] = $this->wanted();
+
+        # Which tab to come back to. A rejected sign-up landing on the sign-in
+        # form looks like the form was cleared for no reason.
+        if (request('tab') === 'signup') $query['tab'] = 'signup';
+
+        return redirect(route('auth-form') . (count($query) ? '?' . http_build_query($query) : ''));
+    }
+
+    /**
+     * The `next` that was posted, if it is one we would honour.
+     *
+     * @return string
+     */
+    private function wanted(): string
+    {
+        $next = $this->next();
+
+        return $next === '/panel' ? '' : $next;
     }
 
     /**
@@ -131,7 +213,7 @@ class AuthController extends Controller
     public function signout(): mixed
     {
         Auth::logout();
-        Alerts::success(_l('cdn.alerts.signed-out'));
+        Flash::success(_l('cdn.alerts.signed-out'));
 
         # A plain form post gets a redirect; only a caller that asked for json
         # gets json. Signing out through a script means a broken script - a cdn

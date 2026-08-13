@@ -476,6 +476,7 @@ return [
 
     'alerts' => [
         'suspended'       => 'This account is suspended.',
+        'suspended-because' => 'This account is suspended: {reason}',
         'quota-saved'     => 'Quota saved for {project}.',
         'bandwidth-reset' => 'This month\'s transfer reset for {project}.',
         'suspended-project' => '{project} suspended — its URLs now answer 403.',

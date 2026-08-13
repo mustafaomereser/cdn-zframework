@@ -186,7 +186,10 @@ $sentMonth = ((array) _l('cdn.common.months'))[(int) date('n') - 1] ?? date('M')
         // Guarded: this used to start with a call into the notify library, and
         // if that had not loaded the exception took every handler below it with
         // it - including, until it became a form, sign-out.
-        try { $.showAlerts(<?= json_encode(\zFramework\Core\Facades\Alerts::get()) ?>); } catch (thrown) {}
+        <?php # Both: the framework's, which only survive inside the request
+              # that set them, and ours, which survive a redirect - see
+              # App\Cdn\Flash. ?>
+        try { $.showAlerts(<?= json_encode(\zFramework\Core\Facades\Alerts::get() + \App\Cdn\Flash::take()) ?>); } catch (thrown) {}
 
         $('form[data-confirm]').on('submit', function (event) {
             if (!confirm($(this).data('confirm'))) event.preventDefault();

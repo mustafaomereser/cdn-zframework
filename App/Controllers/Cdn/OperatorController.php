@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Cdn;
 
+use App\Cdn\Flash;
 use App\Cdn\Operator;
 use App\Cdn\Runner;
 use App\Cdn\Storage;
@@ -53,6 +54,7 @@ class OperatorController
         # layout into one file, so the page's would be the one that loses.
         return view('cdn.pages.admin.projects', [
             'rows'   => Operator::projects(),
+            'units'  => ['B' => 1, 'KB' => 1024, 'MB' => 1024 ** 2, 'GB' => 1024 ** 3, 'TB' => 1024 ** 4],
             'totals' => Operator::totals(),
         ]);
     }
@@ -119,7 +121,30 @@ class OperatorController
             Operator::bytes(request('bandwidth'), request('bandwidth-unit'))
         );
 
-        Alerts::success(_l('cdn.alerts.quota-saved', ['project' => $user['username']]));
+        Flash::success(_l('cdn.alerts.quota-saved', ['project' => $user['username']]));
+
+        return back();
+    }
+
+    /**
+     * A project's own quota, or back to the account's.
+     *
+     * @param string $id
+     * @return mixed
+     */
+    public function projectQuota(string $id): mixed
+    {
+        $project = Operator::project($id);
+        $custom  = (bool) request('custom');
+
+        Operator::projectQuota(
+            $project,
+            $custom,
+            Operator::bytes(request('storage'), request('storage-unit')),
+            Operator::bytes(request('bandwidth'), request('bandwidth-unit'))
+        );
+
+        Flash::success(_l('cdn.alerts.quota-saved', ['project' => $project['name']]));
 
         return back();
     }
@@ -134,7 +159,7 @@ class OperatorController
 
         Operator::resetBandwidth($project);
 
-        Alerts::success(_l('cdn.alerts.bandwidth-reset', ['project' => $project['name']]));
+        Flash::success(_l('cdn.alerts.bandwidth-reset', ['project' => $project['name']]));
 
         return back();
     }
@@ -148,9 +173,9 @@ class OperatorController
         $project = Operator::project($id);
         $status  = (string) request('status');
 
-        Operator::projectStatus($project, $status);
+        Operator::projectStatus($project, $status, (string) request('reason'));
 
-        Alerts::success(_l($status === 'suspended' ? 'cdn.alerts.suspended-project' : 'cdn.alerts.restored-project', [
+        Flash::success(_l($status === 'suspended' ? 'cdn.alerts.suspended-project' : 'cdn.alerts.restored-project', [
             'project' => $project['name'],
         ]));
 
@@ -167,14 +192,14 @@ class OperatorController
         $status = (string) request('status');
 
         if ((int) $user['id'] === (int) Auth::id()) {
-            Alerts::danger(_l('cdn.alerts.not-yourself'));
+            Flash::danger(_l('cdn.alerts.not-yourself'));
 
             return back();
         }
 
-        Operator::userStatus($user, $status);
+        Operator::userStatus($user, $status, (string) request('reason'));
 
-        Alerts::success(_l($status === 'suspended' ? 'cdn.alerts.suspended-user' : 'cdn.alerts.restored-user', [
+        Flash::success(_l($status === 'suspended' ? 'cdn.alerts.suspended-user' : 'cdn.alerts.restored-user', [
             'user' => $user['username'],
         ]));
 
@@ -190,7 +215,7 @@ class OperatorController
         # While auth.operators names anybody, the column is not what decides -
         # writing it would look like it worked and change nothing.
         if (count((array) Support::config('auth.operators', []))) {
-            Alerts::danger(_l('cdn.alerts.operators-in-config'));
+            Flash::danger(_l('cdn.alerts.operators-in-config'));
 
             return back();
         }
@@ -199,14 +224,14 @@ class OperatorController
         $operator = (bool) request('operator');
 
         if (!$operator && (int) $user['id'] === (int) Auth::id()) {
-            Alerts::danger(_l('cdn.alerts.not-yourself'));
+            Flash::danger(_l('cdn.alerts.not-yourself'));
 
             return back();
         }
 
         Operator::operator($user, $operator);
 
-        Alerts::success(_l($operator ? 'cdn.alerts.operator-granted' : 'cdn.alerts.operator-revoked', [
+        Flash::success(_l($operator ? 'cdn.alerts.operator-granted' : 'cdn.alerts.operator-revoked', [
             'user' => $user['username'],
         ]));
 
@@ -222,14 +247,14 @@ class OperatorController
         $user = Operator::user($id);
 
         if ((int) $user['id'] === (int) Auth::id()) {
-            Alerts::danger(_l('cdn.alerts.not-yourself'));
+            Flash::danger(_l('cdn.alerts.not-yourself'));
 
             return back();
         }
 
         $counts = Operator::deleteUser($user);
 
-        Alerts::success(_l('cdn.alerts.user-deleted', [
+        Flash::success(_l('cdn.alerts.user-deleted', [
             'user'  => $user['username'],
             'files' => $counts['files'],
         ]));
