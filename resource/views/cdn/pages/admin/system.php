@@ -40,10 +40,12 @@ foreach ($disks as $diskName => $disk) {
         'free'  => $disk['free'],
         'share' => $disk['share'],
         'ours'  => 0,
+        'files' => 0,
         'paths' => [],
     ];
 
-    $volumes[$key]['ours'] += (int) $disk['used'];
+    $volumes[$key]['ours']  += (int) $disk['used'];
+    $volumes[$key]['files'] += (int) $disk['files'];
     $volumes[$key]['paths'][$diskName] = $disk;
 }
 ?>
@@ -132,10 +134,63 @@ foreach ($disks as $diskName => $disk) {
     </div>
 </div>
 
+<?php # What the control panel says the account is using. Off unless a cPanel
+      # token is configured - see hosting.cpanel. These are the numbers that
+      # actually stop an upload on shared hosting, and PHP cannot see either of
+      # them: they are filesystem quotas. ?>
+<?php if ($hosting) : ?>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6>{{ _l('cdn.system.account') }}</h6>
+            <p class="hint">{{ _l('cdn.system.account-lede') }}</p>
+
+            <div class="row g-3">
+                <?php foreach (['disk', 'files', 'bandwidth'] as $metric) : ?>
+                    <?php if (!isset($hosting[$metric])) continue ?>
+                    <?php $usage = $hosting[$metric]; ?>
+
+                    <div class="col-md-4">
+                        <div class="stat">
+                            <div class="label"><?= _l("cdn.system.account-$metric") ?></div>
+
+                            <div class="value notranslate" translate="no">
+                                <?= $metric === 'files'
+                                    ? number_format($usage['used'])
+                                    : File::humanFileSize($usage['used']) ?>
+                            </div>
+
+                            <?php if ($usage['maximum'] === null) : ?>
+                                <div class="hint"><?= _l('cdn.system.account-unlimited') ?></div>
+                            <?php else : ?>
+                                <div class="quota <?= $usage['share'] >= 95 ? 'full' : ($usage['share'] >= 85 ? 'warn' : '') ?>">
+                                    <div style="width: <?= min(100, (int) $usage['share']) ?>%"></div>
+                                </div>
+                                <div class="hint mt-1 notranslate" translate="no">
+                                    <?= _l('cdn.common.of') ?>
+                                    <?= $metric === 'files'
+                                        ? number_format($usage['maximum'])
+                                        : File::humanFileSize($usage['maximum']) ?>
+                                    · <?= $usage['share'] ?>%
+                                </div>
+                            <?php endif ?>
+                        </div>
+                    </div>
+                <?php endforeach ?>
+            </div>
+
+            <p class="hint small mt-3 mb-0">{{ _l('cdn.system.account-note') }}</p>
+        </div>
+    </div>
+<?php endif ?>
+
 <div class="card">
     <div class="card-body">
         <h6>{{ _l('cdn.operator.disks') }}</h6>
         <p class="hint">{{ _l('cdn.system.disks-lede') }}</p>
+
+        <?php if (!$hosting) : ?>
+            <div class="hint small mb-3">{{ _l('cdn.system.account-off') }}</div>
+        <?php endif ?>
 
         <?php foreach ($volumes as $volume) : ?>
             <div class="volume mb-3">
@@ -153,7 +208,10 @@ foreach ($disks as $diskName => $disk) {
 
                     <div class="text-end">
                         <div class="label">{{ _l('cdn.system.ours') }}</div>
-                        <div class="mt-1 notranslate" translate="no"><b><?= File::humanFileSize($volume['ours']) ?></b></div>
+                        <div class="mt-1 notranslate" translate="no">
+                            <b><?= File::humanFileSize($volume['ours']) ?></b>
+                            <span class="hint"><?= number_format($volume['files']) ?> <?= _l('cdn.system.file-count') ?></span>
+                        </div>
                     </div>
                 </div>
 
@@ -167,10 +225,17 @@ foreach ($disks as $diskName => $disk) {
                     <div class="hint small mt-1"><?= _l('cdn.system.volume-note', ['share' => $volume['share']]) ?></div>
                 <?php endif ?>
 
+                <?php # The ceiling that is easy to miss: shared hosting often
+                      # gives an unlimited disk quota and a hard file count, and
+                      # a content-addressed store spends one file per object and
+                      # another per generated image. ?>
+                <div class="hint small mt-1"><?= _l('cdn.system.inodes-note') ?></div>
+
                 <table class="table table-sm align-middle mt-3 mb-0">
                     <thead>
                         <tr>
                             <th>{{ _l('cdn.system.directory') }}</th>
+                            <th class="text-end" style="width: 110px">{{ _l('cdn.system.file-count') }}</th>
                             <th class="text-end" style="width: 130px">{{ _l('cdn.system.holds') }}</th>
                         </tr>
                     </thead>
@@ -194,6 +259,10 @@ foreach ($disks as $diskName => $disk) {
                                           # a path you cannot read is a path you
                                           # cannot check against anything. ?>
                                     <div class="hint mono path notranslate" translate="no"><?= e((string) $disk['root'], false) ?></div>
+                                </td>
+
+                                <td class="text-end small notranslate" translate="no">
+                                    <?= $disk['files'] === null ? '—' : number_format($disk['files']) ?>
                                 </td>
 
                                 <td class="text-end small notranslate" translate="no">

@@ -198,6 +198,7 @@ class OperatorController
             'info'       => \App\Cdn\System::info(),
             'extensions' => \App\Cdn\System::extensions(),
             'disks'      => \App\Cdn\System::disks(),
+            'hosting'    => \App\Cdn\Hosting::usage(),
             'variants'   => Storage::measure(Storage::variantRoot()),
             'capabilities' => [
                 'driver'  => Transform::driver(),

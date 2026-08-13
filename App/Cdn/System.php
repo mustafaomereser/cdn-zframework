@@ -207,6 +207,33 @@ class System
     }
 
     /**
+     * How many files this application is holding on a given disk.
+     *
+     * @param string $name
+     * @param string $role
+     * @return int|null
+     */
+    private static function filesOn(string $name, string $role): ?int
+    {
+        try {
+            if ($role === 'objects') {
+                $row = (new DB)->prepare(
+                    'SELECT COUNT(*) AS count FROM cdn_objects WHERE disk = :disk',
+                    ['disk' => $name]
+                )->fetch(\PDO::FETCH_ASSOC);
+
+                return (int) ($row['count'] ?? 0);
+            }
+        } catch (\Throwable $thrown) {
+            return null;
+        }
+
+        $root = $role === 'variants' ? Storage::variantRoot() : Storage::tempRoot();
+
+        return is_dir($root) ? (int) (Storage::measure($root)['files'] ?? 0) : null;
+    }
+
+    /**
      * @return string|null
      */
     private static function uptime(): ?string
@@ -301,6 +328,13 @@ class System
                 # What this application has put there, which is a different
                 # question from what is left on the volume.
                 'used'     => self::usedOn($name, $disk['role']),
+
+                # And how many files that is. On shared hosting the disk quota
+                # is often unlimited while the inode count is not, and a
+                # content-addressed store spends one inode per object and
+                # another per generated image - so this is the number that runs
+                # out first.
+                'files'    => self::filesOn($name, $disk['role']),
             ];
         }
 

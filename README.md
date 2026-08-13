@@ -555,7 +555,7 @@ in the sidebar — with four pages, and a fifth when the console is on:
 | Accounts | everybody with an account and what they use. Each one opens: its projects with bucket and file counts, its recent files, its allowance, suspend with a reason, promote, delete |
 | Projects | every project, whoever owns it. Each one opens: its buckets, its recent files, the per-project quota override, suspend, reset this month |
 | Files | every file in the installation, searchable, each row saying which bucket and which project |
-| Server | what the machine is: PHP version and its limits, opcache, web server, processors, load, uptime, RAM, database version, the extensions this application asks for, and every directory it writes to with what it holds and what is left on the volume |
+| Server | what the machine is: PHP version and its limits, opcache, web server, processors, load, uptime, RAM, database version, the extensions this application asks for, and every directory it writes to — grouped by the filesystem they sit on, with files and bytes each holds |
 | Maintenance | the hourly cron's tasks, one button each, when each last ran, and what there is to reclaim right now |
 | Log | who changed what, with the numbers before and after |
 | Console | run `php cdn` and `php terminal` commands — off by default, see below |
@@ -961,6 +961,33 @@ Languages, and building a missing one on demand — see
 ### admin
 
 The panel's route and the console. See [The console](#the-console).
+
+### hosting
+
+The Server page reads the filesystem, which says how full the *server's* disk
+is. On shared hosting that is rarely what stops you: the account has a disk
+quota of its own and a cap on how many **files** it may hold, and a content
+addressed store spends one file per stored object and another per generated
+image — so it is usually the file count that runs out first, while the disk
+quota reads "unlimited".
+
+Neither is visible to PHP; they are filesystem quotas. cPanel knows them and
+will say so to a token belonging to the account:
+
+```php
+'hosting' => [
+    'cpanel' => [
+        'enabled'  => true,
+        'domain'   => 'server.example.com',   // cPanel hostname, no port
+        'username' => 'account',
+        'token'    => '…',                    // cPanel → Security → Manage API Tokens
+    ],
+],
+```
+
+One https call, made only on the page that shows it, with a failure showing as
+a missing block rather than a broken page. Off by default — without it the page
+shows what it can count for itself and says why the rest is missing.
 
 ### api, webhooks, gc
 
