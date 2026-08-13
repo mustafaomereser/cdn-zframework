@@ -29,9 +29,11 @@ class Settings
     {
         self::load();
 
-        # Config is the floor: a key nobody has set in the panel is whatever the
-        # file says, which is what makes this an override rather than a second
-        # source of truth.
+        # Config is the floor where it has something to say: a key nobody has
+        # set in the panel falls back to config/cdn.php, which is what makes
+        # this an override rather than a second source of truth. Keys that live
+        # only here - the cPanel connection - simply find nothing there and get
+        # the default.
         return self::$cache[$name] ?? Support::config($name, $default);
     }
 

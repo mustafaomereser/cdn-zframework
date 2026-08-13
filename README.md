@@ -963,7 +963,7 @@ Languages, and building a missing one on demand — see
 
 The panel's route and the console. See [The console](#the-console).
 
-### hosting
+### The cPanel connection
 
 The Server page reads the filesystem, which says how full the *server's* disk
 is. On shared hosting that is rarely what stops you: the account has a disk
@@ -975,22 +975,17 @@ quota reads "unlimited".
 Neither is visible to PHP; they are filesystem quotas. cPanel knows them and
 will say so to a token belonging to the account:
 
-Set it up under **Administration → cPanel** rather than in this file: a token
-belongs to one installation, and asking somebody to edit a php file over ssh to
-paste one is asking them not to. It is stored in `cdn_settings` and never
-rendered back into the page.
+Set it up under **Administration → cPanel**. There is nothing for it in
+`config/cdn.php`: a token belongs to one installation and nowhere else, so it
+lives in `cdn_settings` — entered in the panel, never rendered back into the
+page, and left out of the audit row that records the change.
 
-```php
-// config/cdn.php only holds the defaults; the panel overrides them.
-'hosting' => [
-    'cpanel' => [
-        'enabled'  => false,
-        'domain'   => '',   // cPanel hostname, no port — 2083 is added
-        'username' => '',
-        'token'    => '',   // cPanel → Security → Manage API Tokens
-    ],
-],
-```
+You need the cPanel **hostname** (the one you log in to, no `https://`, no
+port — 2083 is added), the account username, and a token from cPanel → Security
+→ Manage API Tokens. The page has a **Test the connection** button that says
+which of the four usual problems it is: unreachable host, blocked outbound port
+2083, a token from another account, or an address that answers with a website
+rather than the control panel.
 
 One https call with a five-second connect timeout, made only on the pages that
 show it; a failure is a missing block rather than a broken page. Off by default

@@ -126,25 +126,34 @@ class Hosting
 
         if (!is_array($response) || !($response['status'] ?? 0) || !isset($response['data'])) return null;
 
-        # The ids cPanel uses for the three that matter here. Everything else it
-        # returns - addon domains, email accounts, subdomains - belongs on a
-        # hosting panel rather than on this one.
-        $wanted = [
-            'disk_usage' => 'disk',
-            'file_usage' => 'files',
-            'bandwidth'  => 'bandwidth',
-        ];
-
+        # cPanel does not spell these the same on every version - disk_usage and
+        # diskusage, bandwidth and bwlimit, file_usage and filesusage - so the
+        # id is matched rather than looked up. Everything else it returns (addon
+        # domains, email accounts, subdomains) belongs on a hosting panel rather
+        # than on this one.
         $out = [];
 
         foreach ((array) $response['data'] as $entry) {
-            $key = $wanted[$entry['id'] ?? ''] ?? null;
+            $id = strtolower((string) ($entry['id'] ?? ''));
 
-            if (!$key) continue;
+            if ($id === '') continue;
 
-            # `maximum` is null or 0 for unlimited, which is a different thing
-            # from zero and has to stay distinguishable.
+            $key = null;
+
+            if (str_contains($id, 'file') || str_contains($id, 'inode')) $key = 'files';
+            elseif (str_contains($id, 'disk')) $key = 'disk';
+            elseif (str_contains($id, 'bandwidth') || str_contains($id, 'bwlimit')) $key = 'bandwidth';
+
+            # First spelling wins: a version that sends both disk_usage and
+            # diskusage is saying one thing twice, not two things.
+            if (!$key || isset($out[$key])) continue;
+
+            # `maximum` is null, 0 or the word "unlimited" depending on the
+            # version, all of which mean no ceiling - a different thing from
+            # zero, and it has to stay distinguishable.
             $maximum = $entry['maximum'] ?? null;
+
+            if (!is_numeric($maximum)) $maximum = null;
 
             $out[$key] = [
                 'used'    => (int) ($entry['usage'] ?? 0),
@@ -177,7 +186,25 @@ class Hosting
         $response = self::call('ResourceUsage/get_usages');
         $last     = self::$last;
 
-        if (($response['status'] ?? 0)) return ['ok' => true, 'message' => 'ok', 'detail' => null];
+        if (($response['status'] ?? 0)) {
+            # Connected is not the same as useful. If it answered and nothing in
+            # it reads as disk, files or bandwidth, say so with the ids it did
+            # send - that is the whole diagnosis.
+            $usage = self::usage();
+
+            if ($usage) return ['ok' => true, 'message' => 'ok', 'detail' => null];
+
+            $ids = array_values(array_filter(array_map(
+                fn($entry) => (string) ($entry['id'] ?? ''),
+                (array) ($response['data'] ?? [])
+            )));
+
+            return [
+                'ok'      => false,
+                'message' => 'no-metrics',
+                'detail'  => count($ids) ? implode(', ', array_slice($ids, 0, 20)) : null,
+            ];
+        }
 
         # curl never got an answer: the port, the hostname, or DNS.
         if (($last['error'] ?? null) !== null) {
@@ -223,10 +250,17 @@ class Hosting
 
         if (!is_array($response) || !($response['status'] ?? 0)) return null;
 
-        $ours = self::command();
-        $out  = [];
+        # `data` is the list of lines on every version seen so far, but at
+        # least one wraps it in `jobs`. Both are the same answer.
+        $lines = (array) ($response['data'] ?? []);
 
-        foreach ((array) ($response['data'] ?? []) as $line) {
+        if (isset($lines['jobs']) && is_array($lines['jobs'])) $lines = $lines['jobs'];
+
+        $out = [];
+
+        foreach ($lines as $line) {
+            if (!is_array($line)) continue;
+
             $command = (string) ($line['command'] ?? '');
 
             $out[] = [

@@ -547,32 +547,6 @@ return [
     ],
 
     /**
-     * The hosting account, as its control panel sees it.
-     *
-     * The Server page reads the filesystem, which says how full the server's
-     * disk is. On shared hosting that is rarely the limit that stops you: the
-     * account has a disk quota of its own and a cap on how many files it may
-     * hold - and a content addressed store spends one file per stored object
-     * and another per generated image, so it is usually the file count that
-     * runs out first.
-     *
-     * Neither is visible to PHP; they are filesystem quotas. cPanel knows them
-     * and will say so to an API token that belongs to the account:
-     * cPanel -> Security -> Manage API Tokens.
-     *
-     * One https call, made only on the page that shows it. Off by default -
-     * without it, the page shows what it can count for itself.
-     */
-    'hosting' => [
-        'cpanel' => [
-            'enabled'  => false,
-            'domain'   => '',   // the cPanel hostname, no port
-            'username' => '',
-            'token'    => '',
-        ],
-    ],
-
-    /**
      * The panel.
      */
     'admin' => [
