@@ -56,9 +56,32 @@
                             'working' => _l('cdn.language.working'),
                             'ready'   => _l('cdn.language.ready'),
                             'retry'   => _l('cdn.language.retry'),
+                            'paused'  => _l('cdn.language.paused'),
                         ], JSON_UNESCAPED_UNICODE) ?>;
 
-        let misses = 0;
+        let misses  = 0;
+        let waiting = false;
+
+        // A tab left open in the background kept asking for chunks for as long
+        // as it was open - somebody starts a language, switches away, and an
+        // hour later it is still translating. It stops when the tab is hidden
+        // and picks up where it left off when it comes back, which costs
+        // nothing: the draft on disk is the state, not this page.
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden || !waiting) return;
+
+            waiting = false;
+            step();
+        });
+
+        function paused() {
+            if (!document.hidden) return false;
+
+            waiting = true;
+            state.textContent = texts.paused;
+
+            return true;
+        }
 
         function draw(payload) {
             const percent = payload.total ? Math.round((payload.done / payload.total) * 100) : 0;
@@ -68,6 +91,8 @@
         }
 
         async function step() {
+            if (paused()) return;
+
             let payload;
 
             try {
@@ -111,6 +136,8 @@
                 // Straight on to where they were going, now in their language.
                 return window.location = done;
             }
+
+            if (paused()) return;
 
             step();
         }

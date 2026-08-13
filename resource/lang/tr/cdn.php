@@ -134,6 +134,7 @@ return [
         'working'    => 'Çevriliyor…',
         'ready'      => 'Hazır. Geri dönülüyor…',
         'retry'      => 'Çeviri servisi meşgul. Bekleniyor…',
+        'paused'     => 'Bu sekme arka plandayken duraklatıldı.',
         'failed'     => 'Bu istek geçmedi. Birazdan yeniden denenecek — ya da sonra gelin, kaldığı yerden devam eder.',
         'note'       => 'Bu bir ilk taslak. Kötü duran bir satır olursa dil dosyasında düzeltilebilir ve düzeltilmiş kalır.',
         'cancel'     => 'Şimdi değil',

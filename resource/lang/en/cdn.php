@@ -134,6 +134,7 @@ return [
         'working'    => 'Translating…',
         'ready'      => 'Ready. Taking you back…',
         'retry'      => 'The translation service is busy. Waiting…',
+        'paused'     => 'Paused while this tab is in the background.',
         'failed'     => 'That did not go through. It will try again in a moment - or come back later and carry on from here.',
         'note'       => 'It is a first draft. If a line reads badly, it can be corrected in the language file and it stays corrected.',
         'cancel'     => 'Not now',
