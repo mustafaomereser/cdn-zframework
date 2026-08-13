@@ -77,8 +77,74 @@ class Hosting
 
         $config = self::credentials();
 
-        $url = 'https://' . $config['domain'] . ':2083/execute/' . $endpoint
-            . (count($params) ? '?' . http_build_query($params) : '');
+        return self::fetch(
+            'https://' . $config['domain'] . ':2083/execute/' . $endpoint
+                . (count($params) ? '?' . http_build_query($params) : '')
+        );
+    }
+
+    /**
+     * One API2 call.
+     *
+     * cPanel has two APIs and cron lives only in the older one - UAPI has no
+     * Cron module at all, which is why asking it for one reads as "failed to
+     * load module" rather than as a permission problem.
+     *
+     * @param string $module e.g. "Cron"
+     * @param string $function e.g. "listcron"
+     * @param array  $params
+     * @return array|null The `cpanelresult` body, or null when it did not answer.
+     */
+    private static function call2(string $module, string $function, array $params = []): ?array
+    {
+        if (!self::configured()) return null;
+
+        $config = self::credentials();
+
+        $query = [
+            'cpanel_jsonapi_user'       => $config['username'],
+            'cpanel_jsonapi_apiversion' => 2,
+            'cpanel_jsonapi_module'     => $module,
+            'cpanel_jsonapi_func'       => $function,
+        ] + $params;
+
+        $response = self::fetch('https://' . $config['domain'] . ':2083/json-api/cpanel?' . http_build_query($query));
+
+        if (!is_array($response)) return null;
+
+        # API2 wraps everything one level deeper. Unwrapped here so the callers
+        # never have to know which of the two APIs answered them.
+        $result = $response['cpanelresult'] ?? null;
+
+        if (!is_array($result)) return null;
+
+        # And it reports failure in three different places depending on what
+        # went wrong: a top-level error, an error inside the event, or a result
+        # flag of zero. Any of them means no.
+        $failed = isset($result['error'])
+            || isset($result['event']['error'])
+            || (isset($result['event']['result']) && !(int) $result['event']['result']);
+
+        if ($failed) {
+            self::$last['body'] = json_encode([
+                'errors' => [(string) ($result['error'] ?? $result['event']['error'] ?? 'api2-failed')],
+            ], JSON_UNESCAPED_UNICODE);
+
+            return null;
+        }
+
+        return $result;
+    }
+
+    /**
+     * The one place a request to cPanel is actually made.
+     *
+     * @param string $url
+     * @return array|null
+     */
+    private static function fetch(string $url): ?array
+    {
+        $config = self::credentials();
 
         $curl = curl_init($url);
 
@@ -246,30 +312,21 @@ class Hosting
     {
         if (!self::configured()) return null;
 
-        # UAPI calls this list_lines. `listcron` is the old API2 name, which
-        # answers on some builds and is simply not there on the rest - so the
-        # current name is asked first and the old one is the fallback, rather
-        # than the other way round.
-        $response = self::call('Cron/list_lines');
+        # API2, not UAPI: cron is one of the few things cPanel never moved, and
+        # UAPI answers "failed to load module Cron" because it genuinely has no
+        # such module rather than because the token is short of a permission.
+        $response = self::call2('Cron', 'listcron');
 
-        if (!is_array($response) || !($response['status'] ?? 0)) {
-            $failure  = self::$last;
-            $response = self::call('Cron/listcron');
-
-            # Keep the first failure: "list_lines is not a function" explains
-            # more than the same sentence about the name that was tried after it.
-            if (!is_array($response) || !($response['status'] ?? 0)) {
-                self::$last = $failure;
-
-                return null;
-            }
-        }
+        if (!is_array($response)) return null;
 
         # `data` is the list of lines on every version seen so far, but at
-        # least one wraps it in `jobs`. Both are the same answer.
+        # least one wraps it in `jobs`. Both are the same answer, and a single
+        # line arrives as a bare row rather than as a list of one.
         $lines = (array) ($response['data'] ?? []);
 
         if (isset($lines['jobs']) && is_array($lines['jobs'])) $lines = $lines['jobs'];
+
+        if (isset($lines['command'])) $lines = [$lines];
 
         $out = [];
 
@@ -359,17 +416,17 @@ class Hosting
         foreach ((array) $existing as $line) {
             if (!$line['mine']) continue;
 
-            $response = self::call('Cron/edit_line', self::line($schedule) + [
-                'linekey' => (int) $line['key'],
+            $response = self::call2('Cron', 'edit_line', self::line($schedule) + [
+                'linekey' => (string) $line['key'],
                 'command' => self::command(),
             ]);
 
-            return ['ok' => (bool) ($response['status'] ?? 0), 'error' => self::error($response)];
+            return ['ok' => is_array($response), 'error' => is_array($response) ? null : self::lastError()];
         }
 
-        $response = self::call('Cron/add_line', self::line($schedule) + ['command' => self::command()]);
+        $response = self::call2('Cron', 'add_line', self::line($schedule) + ['command' => self::command()]);
 
-        return ['ok' => (bool) ($response['status'] ?? 0), 'error' => self::error($response)];
+        return ['ok' => is_array($response), 'error' => is_array($response) ? null : self::lastError()];
     }
 
     /**
@@ -380,13 +437,15 @@ class Hosting
     {
         if (!self::configured()) return ['ok' => false, 'error' => 'not-configured'];
 
-        $response = self::call('Cron/remove_line', ['linekey' => $key]);
+        # `line` alongside `linekey`, because which of the two remove_line wants
+        # depends on the version and sending both satisfies either.
+        $response = self::call2('Cron', 'remove_line', ['linekey' => (string) $key, 'line' => (string) $key]);
 
-        return ['ok' => (bool) ($response['status'] ?? 0), 'error' => self::error($response)];
+        return ['ok' => is_array($response), 'error' => is_array($response) ? null : self::lastError()];
     }
 
     /**
-     * A cron expression as the five fields UAPI wants.
+     * A cron expression as the five fields the API wants.
      *
      * @param string $schedule
      * @return array
@@ -402,22 +461,5 @@ class Hosting
             'month'   => $parts[3],
             'weekday' => $parts[4],
         ];
-    }
-
-    /**
-     * Whatever cPanel said went wrong, in one string.
-     *
-     * @param mixed $response
-     * @return string|null
-     */
-    private static function error(mixed $response): ?string
-    {
-        if (!is_array($response)) return 'no-response';
-
-        if (isset($response['error'])) return (string) $response['error'];
-
-        $errors = (array) ($response['errors'] ?? []);
-
-        return count($errors) ? implode(' ', array_map('strval', $errors)) : null;
     }
 }

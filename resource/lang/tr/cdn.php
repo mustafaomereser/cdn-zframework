@@ -29,7 +29,7 @@ return [
     ],
 
     'cpanel' => [
-        'no-crons-answer'     => 'Hesap cevap verdi ama cron listesi gelmedi. Anahtarın cron yetkisine ihtiyacı var - kısıtlı yetkiyle oluşturulmuş bir anahtar kullanım rakamlarını okuyabilir ama crontab’a yaklaşamaz.',
+        'no-crons-answer'     => 'Hesap cevap verdi ama cron listesi gelmedi.',
         'testing'             => "cPanel'e soruluyor…",
         'no-route'            => 'Panel bu adresi henüz tanımıyor. Rota tablosu önbellekte: `php terminal route cache` komutunu tekrar çalıştır ya da önbelleği temizle.',
         'test'                => 'Bağlantıyı dene',
