@@ -1019,6 +1019,20 @@ footer.site { border-top: 1px solid var(--line); background: var(--surface); }
 .bulk-bar .count { font-size: .875rem; color: var(--accent-ink); }
 .bulk-bar .count b { font-size: 1rem; }
 
+/* One filesystem, with the directories that sit on it. */
+.volume {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: var(--surface-2);
+}
+
+.volume table { background: var(--surface); border-radius: var(--radius-sm); }
+
+/* A path is read to be checked against something, so it wraps rather than
+   being cut - there is no useful prefix of /home2/user/site/storage/cdn. */
+.path { word-break: break-all; white-space: normal; }
+
 /* What is true right now, above the button that changes it. */
 .state-box {
     border: 1px solid #f0c2b8;

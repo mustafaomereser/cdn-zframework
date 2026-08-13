@@ -69,6 +69,11 @@ return [
         'extensions'     => 'Bu uygulamanın kullandığı eklentiler',
 
         'disks-lede'     => 'CDN\'in yazdığı her dizin. Boş alan dosya sisteminin boş alanıdır, o birimdeki her şeyle paylaşılır - veritabanı sınırı da kota da değildir.',
+        'volume'         => 'Birim',
+        'free-of'        => 'boş /',
+        'ours'           => "Bu CDN'in tuttuğu",
+        'directory'      => 'Dizin',
+        'volume-note'    => 'Dosya sistemi %{share} dolu. Bu, üzerindeki her şeydir — yalnız bu CDN değil; paylaşımlı barındırmada büyük kısmı başka şeylere aittir.',
         'disk'           => 'Disk',
         'total'          => 'Birim boyutu',
         'holds'          => 'Tuttuğu',

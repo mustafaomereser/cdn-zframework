@@ -282,9 +282,16 @@ class System
             $total  = $exists ? @disk_total_space($root) : false;
             $free   = $exists ? @disk_free_space($root) : false;
 
+            # Which filesystem it is on. Three directories under one storage
+            # root are three rows saying the same free space, which reads as
+            # three disks with a terabyte each. Grouped by device, it is one
+            # volume with three directories on it - which is what it is.
+            $stat = $exists ? @stat($root) : false;
+
             $out[$name] = [
                 'root'     => $root,
                 'role'     => $disk['role'],
+                'device'   => $stat === false ? null : (string) ($stat['dev'] ?? ''),
                 'exists'   => $exists,
                 'writable' => $exists ? is_writable($root) : null,
                 'total'    => $total === false ? null : (int) $total,

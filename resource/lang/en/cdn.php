@@ -69,6 +69,11 @@ return [
         'extensions'     => 'Extensions this application asks for',
 
         'disks-lede'     => 'Every directory the CDN writes to. Free space is the filesystem\'s, shared with anything else on that volume - it is not a database limit and not a quota.',
+        'volume'         => 'Volume',
+        'free-of'        => 'free of',
+        'ours'           => 'This CDN is holding',
+        'directory'      => 'Directory',
+        'volume-note'    => 'The filesystem is {share}% full. That is everything on it, not only this CDN - on shared hosting, most of it belongs to something else.',
         'disk'           => 'Disk',
         'total'          => 'Volume size',
         'holds'          => 'Holding',
