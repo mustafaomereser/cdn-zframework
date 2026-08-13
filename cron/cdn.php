@@ -13,70 +13,21 @@
  *
  *   0 * * * * php /path/to/cron/cdn.php
  *
- * `php cdn gc` and friends do the same things interactively, with
- * output. This one is quiet unless something goes wrong.
+ * The work itself is in App\Cdn\Housekeeping, because this is not the only
+ * thing that runs it: the operator's Installation page has a button for each
+ * task, for the host where nobody set up a crontab and for the day somebody
+ * wants the disk back now rather than at the top of the hour.
+ *
+ * `php cdn gc` and friends do the same things interactively, with output. This
+ * one is quiet unless something goes wrong.
  */
 
-use App\Cdn\Metrics;
-use App\Cdn\Purger;
-use App\Cdn\Storage;
-use App\Cdn\Support;
-use App\Models\Cdn\Uploads;
-use zFramework\Core\GlobalCache;
+use App\Cdn\Housekeeping;
 
 $started = microtime(true);
-$did     = [];
 
 try {
-    $config = (array) config('cdn.gc');
-
-    # Once a day, whoever gets here first. A marker in the shared cache rather
-    # than a separate crontab entry: one schedule to get wrong instead of two.
-    $daily = date('Y-m-d');
-    $ranToday = GlobalCache::cache('cdn.cron.daily', fn() => null, 172800) === $daily;
-
-    if (!$ranToday) {
-        GlobalCache::remove('cdn.cron.daily');
-        GlobalCache::cache('cdn.cron.daily', fn() => $daily, 172800);
-
-        if ($config['stat-rollup'] ?? true) {
-            # Yesterday, and today so far - so the dashboard is not a day behind
-            # for anyone looking at it in the afternoon.
-            $did['rollup'] = Metrics::rollup(date('Y-m-d', strtotime('-1 day'))) + Metrics::rollup($daily);
-        }
-
-        if ($config['log-pruning'] ?? true) $did['pruned'] = Metrics::prune();
-    }
-
-    if ($config['expired-uploads'] ?? true) {
-        $model   = new Uploads;
-        $expired = $model->where('expires_at', '<', date('Y-m-d H:i:s'))->where('status', '!=', 'completed')->closureMode(false)->get();
-
-        foreach ($expired as $upload) @unlink($upload['temp_path']);
-        if (count($expired)) $model->whereIn('id', array_column($expired, 'id'))->delete();
-
-        $did['uploads'] = count($expired);
-    }
-
-    if ($config['variant-eviction'] ?? true) {
-        $evicted = Purger::evict();
-        $did['variants'] = $evicted['evicted'];
-    }
-
-    if ($config['orphan-objects'] ?? true) {
-        $collected = Purger::collect();
-        $did['objects'] = $collected['deleted'];
-    }
-
-    # Temporary files whose session is gone - a process that died between
-    # writing bytes and writing the row that owns them.
-    $stale = 0;
-    foreach (glob(Storage::tempRoot() . '/*') ?: [] as $file) {
-        if (!is_file($file) || filemtime($file) > time() - 86400) continue;
-        @unlink($file);
-        $stale++;
-    }
-    $did['temp'] = $stale;
+    $did = Housekeeping::run();
 } catch (\Throwable $exception) {
     # A cron that fails silently is a cron that is not running. The framework's
     # handler writes the trace; this line is what a `tail` on the cron mail

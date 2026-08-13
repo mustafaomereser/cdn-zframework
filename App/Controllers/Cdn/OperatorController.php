@@ -205,6 +205,8 @@ class OperatorController
 
         return view('cdn.pages.admin.system', [
             'totals'   => Operator::totals(),
+            'tasks'    => array_keys(\App\Cdn\Housekeeping::tasks()),
+            'lastRun'  => \App\Cdn\Housekeeping::lastRun(),
             'disks'    => $disks,
             'variants' => Storage::measure(Storage::variantRoot()),
             'capabilities' => [
@@ -218,6 +220,46 @@ class OperatorController
                 'finfo' => class_exists('finfo'),
             ],
         ]);
+    }
+
+    /**
+     * Run the housekeeping, or one task of it, from the panel.
+     *
+     * The same work the hourly cron does. It is here for the host where nobody
+     * set up a crontab, and for the day somebody wants the disk back now rather
+     * than at the top of the hour - which is why the daily tasks run when they
+     * are asked for by name even if they already ran today.
+     *
+     * @return mixed
+     */
+    public function maintenance(): mixed
+    {
+        $only = (string) request('task');
+        $only = $only !== '' && isset(\App\Cdn\Housekeeping::tasks()[$only]) ? $only : null;
+
+        # A long job on a web request. It is bounded - the tasks are all
+        # counted work over rows and files - but the default limit is not
+        # written for it.
+        @set_time_limit(max(60, (int) Support::config('admin.console.timeout', 120)));
+
+        try {
+            $did = \App\Cdn\Housekeeping::run($only, true);
+        } catch (\Throwable $thrown) {
+            Flash::danger(_l('cdn.operator.maintenance-failed', ['error' => $thrown->getMessage()]));
+
+            return back();
+        }
+
+        Operator::audit('maintenance', 'system', ['id' => null, 'name' => $only ?: 'all'], $did);
+
+        # What it actually did, per task, rather than "done".
+        $summary = [];
+
+        foreach ($did as $task => $count) $summary[] = _l("cdn.operator.task-$task") . ': ' . number_format($count);
+
+        Flash::success(count($summary) ? implode(' · ', $summary) : _l('cdn.operator.maintenance-nothing'));
+
+        return back();
     }
 
     #region Actions
@@ -387,8 +429,8 @@ class OperatorController
 
         return view('cdn.pages.admin.console', [
             'scripts' => [
-                'cdn'      => Runner::allowed('cdn'),
-                'terminal' => Runner::allowed('terminal'),
+                'cdn'      => Runner::commands('cdn'),
+                'terminal' => Runner::commands('terminal'),
             ],
             'timeout' => (int) Support::config('admin.console.timeout', 120),
         ]);

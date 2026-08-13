@@ -555,7 +555,7 @@ in the sidebar — with four pages, and a fifth when the console is on:
 | Accounts | everybody with an account and what they use. Each one opens: its projects with bucket and file counts, its recent files, its allowance, suspend with a reason, promote, delete |
 | Projects | every project, whoever owns it. Each one opens: its buckets, its recent files, the per-project quota override, suspend, reset this month |
 | Files | every file in the installation, searchable, each row saying which bucket and which project |
-| Installation | what this machine can actually do (image engine, formats, cache, finfo), disks and free space |
+| Installation | what this machine can actually do (image engine, formats, cache, finfo), disks and free space — and a button for each housekeeping task, with when it last ran |
 | Log | who changed what, with the numbers before and after |
 | Console | run `php cdn` and `php terminal` commands — off by default, see below |
 
@@ -662,22 +662,27 @@ defensible rather than convenient:
         'timeout' => 120,       // seconds; a command that never returns is a worker that never returns
         'php'     => '',        // '' uses the running interpreter
 
-        'allow'   => [
-            'cdn'      => ['gc', 'verify', 'rollup', 'prune', 'stats', 'purge', 'sign', 'key', 'translate'],
-            'terminal' => ['route', 'cache', 'queue', 'security', 'bench'],
+        'block'   => [
+            'cdn'      => [],      // empty: everything is allowed
+            'terminal' => [],
         ],
     ],
 ],
 ```
 
 - Operator only, behind the panel session and csrf.
-- `allow` is an allowlist of first words, not a denylist — a denylist is a list
-  of the dangerous things somebody thought of. `['*']` accepts everything that
-  script can do, which for `terminal` includes migrating the database and
-  rewriting the framework on disk.
-- Left out of the defaults on purpose: `db` (migrates, can drop columns),
-  `release` and `---update` (rewrite zFramework), `make` (writes php files into
-  the application), `test`.
+- `block` is a blocklist of first words, **empty by default**: everything the
+  command line can do, the console can do. It is the weaker shape of the two and
+  worth being clear about — a blocklist protects against the commands somebody
+  thought of, and a new command is allowed the day it is added. What keeps this
+  closed is the door in front of it, not the list behind it.
+- Worth putting in it if the panel is not for the person who owns the server:
+  `release` and `---update` (rewrite zFramework on disk), `make` (writes php
+  files into the application), `db` (alters tables, drops columns a migration no
+  longer declares).
+- The command list on the page is read from the scripts themselves — `php cdn`
+  from its own public methods, `php terminal` from the modules it discovers — so
+  a command added to either appears without touching the panel.
 - **No shell.** Arguments are passed to `proc_open` as an array, so `;`, `|` and
   `>` are arguments a command will not understand rather than a second command.
 - Every run is an audit row: the line, who ran it, and its exit code.
@@ -775,7 +780,14 @@ for the supported, billed API.
 
 One entry, hourly. Order matters and the file knows it: the rollup reads the log
 before pruning trims it, and the collector runs after evictions release their
-references. Daily work notices it has already run today.
+references. Daily work notices it has already run today — from
+`storage/cdn/housekeeping.json`, not a cache: APCu is per process pool, so a
+marker the cron writes under CLI php is invisible to the panel under the web
+SAPI, and the daily work would run every hour.
+
+The same tasks have a button each under **Administration → Installation**, with
+the time each last ran. For the host where nobody set up a crontab, and for the
+day you want the disk back now rather than at the top of the hour.
 
 Without this: charts stay empty, deleted files never free their disk space, and
 the request log grows forever.

@@ -87,4 +87,56 @@
         </div>
     </div>
 </div>
+
+<?php # The hourly cron's work, with a button on it. For the host where nobody
+      # set up a crontab, and for the day somebody wants the disk back now
+      # rather than at the top of the hour. ?>
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+            <div>
+                <h6 class="mb-1">{{ _l('cdn.operator.maintenance') }}</h6>
+                <p class="hint mb-0">{{ _l('cdn.operator.maintenance-lede') }}</p>
+            </div>
+
+            <form method="POST" action="{{ route('cdn-admin.operator.system.run') }}">
+                <?= csrf() ?>
+                <button class="btn btn-sm btn-primary text-nowrap">
+                    <i class="bi bi-play-fill"></i> {{ _l('cdn.operator.run-all') }}
+                </button>
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <tbody>
+                    <?php foreach ($tasks as $task) : ?>
+                        <tr>
+                            <td>
+                                <div><?= _l("cdn.operator.task-$task") ?></div>
+                                <div class="hint"><?= _l("cdn.operator.task-$task-help") ?></div>
+                            </td>
+
+                            <td class="text-end hint small text-nowrap notranslate" translate="no">
+                                <?= $lastRun[$task] ?: '—' ?>
+                            </td>
+
+                            <td class="text-end" style="width: 1%">
+                                <form method="POST" action="{{ route('cdn-admin.operator.system.run') }}">
+                                    <?= csrf() ?>
+                                    <input type="hidden" name="task" value="<?= $task ?>">
+                                    <button class="btn btn-sm btn-outline-secondary text-nowrap">
+                                        {{ _l('cdn.operator.run') }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="hint small mt-2 mb-0">{{ _l('cdn.operator.maintenance-cron') }}</p>
+    </div>
+</div>
 @endsection

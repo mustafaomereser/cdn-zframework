@@ -565,21 +565,23 @@ return [
          * array, so a `;` is an argument and not a second command), a timeout,
          * and an audit row per run.
          *
-         * allow    First words that may be run, per script. An allowlist, not a
-         *          denylist - a denylist is a list of the dangerous things
-         *          somebody thought of. `['*']` accepts everything that script
-         *          can do, which for `terminal` includes migrating the database
-         *          and rewriting the framework on disk.
+         * block    First words the console will not run, per script. Empty
+         *          means everything the command line can do, the console can do
+         *          - including migrating the database and rewriting the
+         *          framework on disk.
          *
-         *          `db` is in the defaults because migrating after a deploy is
-         *          the most ordinary maintenance there is - but know what it can
-         *          do: it alters tables and drops columns a migration no longer
-         *          declares. Take it out on an installation where the person
-         *          with the panel is not the person who owns the schema.
+         *          A blocklist is the weaker shape and it is worth being clear
+         *          about why it is the one here: it protects against the
+         *          commands somebody thought of, and a new command is allowed
+         *          the day it is added. What keeps this closed is the door in
+         *          front of it - enabled, operator only, session and csrf - not
+         *          the list behind it.
          *
-         *          Left out on purpose: release and ---update (rewrite zFramework
-         *          on disk), make (writes php files into the application), test
-         *          (runs whatever it finds).
+         *          Worth putting in it if the panel is not for the person who
+         *          owns the server: release and ---update (rewrite zFramework on
+         *          disk), make (writes php files into the application), db
+         *          (alters tables and drops columns a migration no longer
+         *          declares).
          *
          * timeout  Seconds. A command that never returns is a worker that never
          *          returns.
@@ -593,9 +595,9 @@ return [
             'timeout' => 120,
             'php'     => '',
 
-            'allow'   => [
-                'cdn'      => ['gc', 'verify', 'rollup', 'prune', 'stats', 'purge', 'sign', 'key', 'translate'],
-                'terminal' => ['route', 'cache', 'queue', 'security', 'bench', 'db'],
+            'block'   => [
+                'cdn'      => [],
+                'terminal' => [],
             ],
         ],
     ],

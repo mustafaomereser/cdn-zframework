@@ -42,6 +42,29 @@ class Console
      * @param array $argv
      * @return void
      */
+    /**
+     * Every command this script has, derived from its own public methods.
+     *
+     * The same list `php cdn` prints, so the panel cannot drift from it.
+     *
+     * @return array
+     */
+    public static function commands(): array
+    {
+        $skip = ['begin', 'commands'];
+
+        return array_values(array_diff(
+            array_map(
+                fn($method) => strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $method->name)),
+                array_filter(
+                    (new \ReflectionClass(self::class))->getMethods(\ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_STATIC),
+                    fn($method) => $method->isPublic() && $method->isStatic() && $method->class === self::class
+                )
+            ),
+            $skip
+        ));
+    }
+
     public static function begin(array $argv): void
     {
         array_shift($argv);

@@ -33,18 +33,18 @@
             </div>
         </form>
 
-        <?php # What each script will accept. Clicking one fills the box rather
-              # than running it: the whole point of the allowlist is that nothing
-              # runs without somebody meaning it. ?>
+        <?php # What each script offers, read from the script itself. Clicking
+              # one fills the box rather than running it - a command list is a
+              # reminder of what exists, not a row of triggers. ?>
         <?php foreach ($scripts as $script => $commands) : ?>
             <div class="console-allow mb-2" data-for="<?= $script ?>">
-                <span class="hint small me-1">{{ _l('cdn.console.allowed') }}</span>
+                <span class="hint small me-1">{{ _l('cdn.console.commands') }}</span>
                 <?php foreach ($commands as $command) : ?>
                     <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 mb-1 mono notranslate" translate="no"
                             data-fill="<?= e((string) $command, false) ?>"><?= e((string) $command, false) ?></button>
                 <?php endforeach ?>
                 <?php if (!count($commands)) : ?>
-                    <span class="hint small">{{ _l('cdn.console.none-allowed') }}</span>
+                    <span class="hint small">{{ _l('cdn.console.no-commands') }}</span>
                 <?php endif ?>
             </div>
         <?php endforeach ?>

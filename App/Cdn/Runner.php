@@ -3,6 +3,7 @@
 namespace App\Cdn;
 
 use zFramework\Core\Facades\Auth;
+use zFramework\Kernel\Helpers\Module;
 use zFramework\Kernel\Terminal;
 
 /**
@@ -16,8 +17,10 @@ use zFramework\Kernel\Terminal;
  *
  *   - Off unless `admin.console.enabled` says otherwise.
  *   - Operator only, behind the panel's own session and csrf.
- *   - An allowlist of first words. Not a denylist: a denylist is a list of the
- *     dangerous things somebody thought of.
+ *   - A blocklist of first words, empty by default. Everything the command
+ *     line can do, this can do; a name in the list takes one command away from
+ *     the panel while leaving it on the terminal. The list is not what keeps
+ *     this closed - the door in front of it is.
  *   - A timeout on the command, and an audit row per run.
  *
  * It runs **in this process**, not as a child. proc_open and friends are
@@ -68,22 +71,76 @@ class Runner
     }
 
     /**
-     * First words that may be run, per script.
+     * First words that may NOT be run, per script.
      *
-     * Read from config so an installation can widen or narrow it without
-     * editing this file. The defaults leave out the ones that are not a
-     * maintenance task at all: `db` migrates and can drop columns, `release`
-     * and `update` rewrite the framework on disk, `make` writes new php files
-     * into the application, and `test` runs whatever it finds.
+     * A blocklist, and empty by default: everything the command line can do,
+     * the console can do. That is the point of it - an operator who has to ssh
+     * in for the one command the panel would not run has a panel that saved
+     * them nothing.
+     *
+     * It is the weaker shape of the two and worth being clear about why it is
+     * the one here: a blocklist protects against the commands somebody thought
+     * of, and a new command is allowed the day it is added. What actually keeps
+     * this closed is the door in front of it - off by default, operator only,
+     * session and csrf - not the list behind it.
+     *
+     * Put a name in it to take that command away from the panel while leaving
+     * it on the terminal: `release` and `---update` rewrite the framework on
+     * disk, `make` writes php files into the application.
      *
      * @param string $script
      * @return array
      */
-    public static function allowed(string $script): array
+    public static function blocked(string $script): array
     {
-        $allowed = (array) Support::config('admin.console.allow', []);
+        $blocked = (array) Support::config('admin.console.block', []);
 
-        return array_values(array_filter((array) ($allowed[$script] ?? [])));
+        return array_values(array_filter(array_map('strtolower', (array) ($blocked[$script] ?? []))));
+    }
+
+    /**
+     * The commands a script offers, for the panel to list.
+     *
+     * Read from the scripts themselves rather than from a constant here: `php
+     * cdn` derives its list from its own public methods and the framework's
+     * terminal from the modules it discovers, so a command added to either
+     * shows up without this file being touched.
+     *
+     * @param string $script
+     * @return array
+     */
+    public static function commands(string $script): array
+    {
+        $blocked = self::blocked($script);
+
+        $names = $script === 'cdn' ? Console::commands() : self::terminalCommands();
+        $names = array_values(array_diff($names, $blocked));
+
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * What `php terminal` would list.
+     *
+     * @return array
+     */
+    private static function terminalCommands(): array
+    {
+        if (!class_exists(Module::class)) return [];
+
+        # It reads the directory rather than a list, so a module added to the
+        # framework appears here without this file being touched. Names come out
+        # the way they are typed: PushNotification is push-notification.
+        Module::getModules();
+
+        $names = array_map('strval', array_keys((array) Module::$list));
+
+        # `help` prints the list this page already is, and `start` and `run` are
+        # the interactive shell and the dev server - neither means anything in a
+        # request that has to end.
+        return array_values(array_diff($names, ['help', 'start', 'run']));
     }
 
     /**
@@ -133,14 +190,9 @@ class Runner
 
         if (!count($arguments)) return self::refuse('empty');
 
-        $allowed = self::allowed($script);
         $command = strtolower($arguments[0]);
 
-        # `*` is how an installation says it accepts the risk in full. It is not
-        # the default and it is not what the config file suggests.
-        if (!in_array('*', $allowed, true) && !in_array($command, $allowed, true)) {
-            return self::refuse('not-allowed:' . $command);
-        }
+        if (in_array($command, self::blocked($script), true)) return self::refuse('blocked:' . $command);
 
         # A command that never returns is a worker that never returns. In this
         # process the only limit that applies is php's own.
