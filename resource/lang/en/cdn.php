@@ -140,6 +140,7 @@ return [
         'no-commands' => 'This script offers nothing - or everything it has is blocked.',
         'warning'  => 'This runs commands on the server as the web user. Only the commands listed below are accepted, nothing is passed through a shell, and each run stops after {timeout} seconds and is written to the log.',
         'holder'   => 'gc grace=3600',
+        'holder-terminal' => 'db migrate',
         'run'      => 'Run',
         'allowed'  => 'Allowed:',
         'none-allowed' => 'Nothing is allowed for this script — see admin.console.allow.',

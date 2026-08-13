@@ -16,7 +16,12 @@
             <?= csrf() ?>
 
             <div class="col-auto">
-                <select name="script" id="console-script" class="form-select form-select-sm notranslate" translate="no" style="width: 130px">
+                <?php # data-plain: select2 fires jQuery events, and a plain
+                      # addEventListener never sees them - so the command list
+                      # below did not follow the script. Two options need no
+                      # search box anyway. ?>
+                <select name="script" id="console-script" class="form-select form-select-sm notranslate"
+                        translate="no" style="width: 140px" data-plain>
                     <option value="cdn">php cdn</option>
                     <option value="terminal">php terminal</option>
                 </select>
@@ -75,15 +80,24 @@
             out.scrollTop = out.scrollHeight;
         }
 
-        // Only the selected script's allowlist.
-        function showAllowed() {
+        // Only the selected script's commands.
+        function showCommands() {
             document.querySelectorAll('.console-allow').forEach(function (row) {
-                row.style.display = row.dataset.for === script.value ? '' : 'none';
+                row.hidden = row.dataset.for !== script.value;
             });
+
+            input.placeholder = script.value === 'cdn'
+                ? <?= json_encode(_l('cdn.console.holder')) ?>
+                : <?= json_encode(_l('cdn.console.holder-terminal')) ?>;
         }
 
-        script.addEventListener('change', showAllowed);
-        showAllowed();
+        script.addEventListener('change', showCommands);
+
+        // Belt and braces: if something turns this into a select2 after all,
+        // jQuery's change is the only event it will fire.
+        if (window.jQuery) jQuery(script).on('change', showCommands);
+
+        showCommands();
 
         document.querySelectorAll('[data-fill]').forEach(function (button) {
             button.addEventListener('click', function () {

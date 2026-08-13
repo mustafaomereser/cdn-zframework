@@ -140,6 +140,7 @@ return [
         'no-commands' => 'Bu betikte komut yok - ya da hepsi engellenmiş.',
         'warning'  => 'Bu, sunucuda web kullanıcısı olarak komut çalıştırır. Yalnız aşağıdaki komutlar kabul edilir, hiçbiri kabuktan geçmez, her çalıştırma {timeout} saniye sonra kesilir ve kayda yazılır.',
         'holder'   => 'gc grace=3600',
+        'holder-terminal' => 'db migrate',
         'run'      => 'Çalıştır',
         'allowed'  => 'İzinli:',
         'none-allowed' => 'Bu betik için hiçbir komut izinli değil — admin.console.allow bölümüne bakın.',
