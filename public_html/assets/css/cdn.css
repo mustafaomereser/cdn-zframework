@@ -338,7 +338,19 @@ main { min-width: 0; padding: 28px 32px 64px; }
  * .form-select, so a page does not look like two products stitched together.
  */
 
-.select2-container { width: 100% !important; }
+/* No forced width here.
+ *
+ * Select2 is initialised with width: '100%', which sets the inline width of the
+ * container that sits in the form - that part needs no help. The dropdown is a
+ * second container, appended to <body> and given an exact pixel width and left
+ * offset by Select2's positioning code. A `width: 100% !important` hit that one
+ * too: it kept the field's left offset and became as wide as the page, running
+ * off the right edge. Nothing looked wrong, but the document grew and a
+ * horizontal scrollbar appeared, scrolling into empty space.
+ */
+.select2-container { max-width: 100%; }
+body > .select2-container { max-width: none; }
+.select2-dropdown { max-width: 100vw; }
 
 .select2-container--default .select2-selection--single,
 .select2-container--default .select2-selection--multiple {
@@ -650,18 +662,33 @@ main { min-width: 0; padding: 28px 32px 64px; }
 .url-demo .q { color: #9db0ff; }
 
 /* The "one file, three sizes" illustration. Real, visible blocks with a border
-   - the first version used a near-white gradient that simply was not there. */
+   - the first version used a near-white gradient that simply was not there.
+ *
+ * The bar sits inside a track rather than being sized against the card. Two
+ * reasons: a 100% bar plus a caption beside it overflowed, and widths measured
+ * against a shared track are what makes the three comparable at a glance -
+ * which is the only thing this picture is for.
+ */
 .size-demo { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+
+.size-demo .track { flex: 1 1 auto; min-width: 0; }
 
 .size-demo .bar {
     height: 30px;
     border-radius: 5px;
     background: linear-gradient(135deg, #dfe5f5 0%, #c8d2ee 100%);
     border: 1px solid #b7c3e4;
-    flex: 0 0 auto;
+    max-width: 100%;
 }
 
-.size-demo .caption { font-size: .8125rem; color: var(--ink-2); font-weight: 500; white-space: nowrap; }
+.size-demo .caption {
+    flex: 0 0 auto;
+    font-size: .8125rem;
+    color: var(--ink-2);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
 .size-demo + .mono { color: var(--ink-3); font-size: .8125rem; margin-bottom: 14px; }
 
 .feature {

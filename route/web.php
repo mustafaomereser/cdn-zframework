@@ -24,7 +24,9 @@ Route::middleware([App\Middlewares\Guest::class])->group(function () {
     Route::post('/sign-up', [AuthController::class, 'signup'])->name('sign-up');
 });
 
-Route::middleware([App\Middlewares\Auth::class])->group(fn() => Route::any('/sign-out', [AuthController::class, 'signout'])->name('sign-out'));
+# POST, not any(): a sign-out reachable by GET can be triggered by an <img> tag
+# on somebody else's page, and the csrf check only runs on non-GET methods.
+Route::middleware([App\Middlewares\Auth::class])->group(fn() => Route::post('/sign-out', [AuthController::class, 'signout'])->name('sign-out'));
 
 Route::get('/auth-content', [AuthController::class, 'content'])->name('auth-content');
 

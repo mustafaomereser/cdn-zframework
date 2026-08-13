@@ -46,7 +46,7 @@
                             ['the original', '',                     100],
                         ] as [$caption, $query, $width]) : ?>
                             <div class="size-demo">
-                                <div class="bar" style="width: <?= $width ?>%"></div>
+                                <div class="track"><div class="bar" style="width: <?= $width ?>%"></div></div>
                                 <span class="caption"><?= $caption ?></span>
                             </div>
                             <div class="mono">…/hero.jpg<?= $query ?></div>
