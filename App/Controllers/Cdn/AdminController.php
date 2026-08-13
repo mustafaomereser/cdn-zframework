@@ -455,21 +455,45 @@ class AdminController
      */
     public function projects(): mixed
     {
+        $projects = Tenant::projects();
+        $ids      = array_map(fn($project) => (int) $project['id'], $projects);
+        $usage    = Tenant::usage();
+        $selected = Tenant::selected();
+        $month    = date('Y-m');
+
+        # One query for every bucket of every project, grouped after. A query per
+        # project is a query per project, and this page exists to be opened.
+        $buckets = count($ids)
+            ? (new Buckets)->whereIn('project_id', $ids)->closureMode(false)->orderBy(['storage_used' => 'DESC'])->get()
+            : [];
+
         $rows = [];
 
-        foreach (Tenant::projects() as $project) {
-            $buckets = (new Buckets)->where('project_id', $project['id'])->closureMode(false)->get();
+        foreach ($projects as $index => $project) {
+            $own = array_values(array_filter($buckets, fn($bucket) => (int) $bucket['project_id'] === (int) $project['id']));
+
+            $custom = ($project['quota_mode'] ?? 'account') === 'custom';
 
             $rows[] = $project + [
-                'buckets' => count($buckets),
-                'files'   => array_sum(array_map(fn($bucket) => (int) $bucket['files_count'], $buckets)),
-                'used'    => (int) $project['storage_used'],
-                'quota'   => (int) $project['storage_quota'],
+                'buckets'   => $own,
+                'files'     => array_sum(array_map(fn($bucket) => (int) $bucket['files_count'], $own)),
+                'used'      => (int) $project['storage_used'],
+                'month'     => ($project['bandwidth_period'] ?? null) === $month ? (int) $project['bandwidth_used'] : 0,
+
+                # The ceiling this one will actually hit, and whose it is.
+                'quota'     => $custom ? (int) $project['storage_quota'] : (int) $usage['quota'],
+                'own-quota' => $custom,
+
+                # The first is the account's namespace: it cannot be renamed or
+                # deleted, and saying so here saves opening it to find out.
+                'main'      => $index === 0,
+                'selected'  => $selected && (int) $selected['id'] === (int) $project['id'],
             ];
         }
 
         return view('cdn.pages.projects.index', [
             'rows'   => $rows,
+            'usage'  => $usage,
             'prefix' => rtrim((string) Support::config('delivery.url-prefix', '/cdn'), '/'),
         ]);
     }

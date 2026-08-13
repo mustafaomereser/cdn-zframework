@@ -210,6 +210,35 @@ pre code { background: none; padding: 0; }
 .sidebar .project-switch .select2-selection__arrow b { border-color: #8d97a6 transparent transparent transparent !important; }
 
 /* A project, on the list of them. */
+.project-row { transition: border-color .12s, box-shadow .12s; }
+.project-row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
+.project-row.suspended { border-color: #f0c2b8; }
+.project-row.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.project-row .counts { display: flex; flex-wrap: wrap; gap: 14px; font-size: .8125rem; color: var(--ink-3); }
+.project-row .counts b { color: var(--ink); font-weight: 600; }
+
+/* The buckets inside it, named. "3 buckets" is not an answer to "which". */
+.bucket-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.bucket-chips .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    background: var(--surface-2);
+    font-size: .8125rem;
+    font-weight: 450;
+    color: var(--ink-2);
+    max-width: 100%;
+}
+
+.bucket-chips .chip:hover { border-color: var(--line-strong); color: var(--ink); text-decoration: none; }
+.bucket-chips .chip i { font-size: .78rem; color: var(--ink-3); }
+.bucket-chips .chip .hint { font-size: .75rem; }
+
 .project-card {
     display: block;
     background: var(--surface);
