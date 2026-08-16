@@ -207,11 +207,17 @@ class Operator
             : [];
 
         return [
-            'user'     => $user,
-            'projects' => self::withCounts($projects, $buckets),
-            'buckets'  => $buckets,
-            'files'    => $files,
-            'keys'     => count($ids) ? count((new ApiKeys)->whereIn('project_id', $ids)->closureMode(false)->get()) : 0,
+            'user'    => $user,
+
+            # Not `projects`: the layout assigns that name itself, and because a
+            # section is spliced into the layout rather than rendered in a scope
+            # of its own, the layout's line runs first and the page would list
+            # the operator's own projects instead of this account's.
+            'owned'   => self::withCounts($projects, $buckets),
+
+            'buckets' => $buckets,
+            'files'   => $files,
+            'keys'    => count($ids) ? count((new ApiKeys)->whereIn('project_id', $ids)->closureMode(false)->get()) : 0,
         ];
     }
 

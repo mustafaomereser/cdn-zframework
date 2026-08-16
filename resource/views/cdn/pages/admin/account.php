@@ -44,7 +44,7 @@ $sentShare = $sentQuota > 0 ? min(100, round($user['bandwidth'] / $sentQuota * 1
     <?php foreach ([
         ['stored',   'bi-hdd',           File::humanFileSize($user['storage'])],
         ['transfer', 'bi-arrow-down-up', File::humanFileSize($user['bandwidth'])],
-        ['projects', 'bi-boxes',         number_format(count($projects))],
+        ['projects', 'bi-boxes',         number_format(count($owned))],
         ['buckets',  'bi-folder2',       number_format(count($buckets))],
     ] as [$key, $icon, $value]) : ?>
         <div class="col-6 col-lg-3">
@@ -101,7 +101,9 @@ $sentShare = $sentQuota > 0 ? min(100, round($user['bandwidth'] / $sentQuota * 1
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($projects as $project) : ?>
+                            <?php # $owned, not $projects: the layout owns that name and its own
+                                  # assignment runs before this section does. ?>
+                            <?php foreach ($owned as $project) : ?>
                                 <tr>
                                     <td>
                                         <a href="{{ route('cdn-admin.operator.projects.show', ['id' => $project['id']]) }}"
@@ -123,7 +125,7 @@ $sentShare = $sentQuota > 0 ? min(100, round($user['bandwidth'] / $sentQuota * 1
                                 </tr>
                             <?php endforeach ?>
 
-                            <?php if (!count($projects)) : ?>
+                            <?php if (!count($owned)) : ?>
                                 <tr><td colspan="5" class="text-center hint py-3">{{ _l('cdn.common.nothing') }}</td></tr>
                             <?php endif ?>
                         </tbody>
